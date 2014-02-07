@@ -1,6 +1,8 @@
 
 from tkinter import *
 
+# Structures de données et fonction d'interface
+
 class Obstacle:
     # Obstacle triangulaire
     
@@ -16,15 +18,15 @@ class Obstacle:
         self.dot11=v[0]**2 + v[1]**2
         self.invDenom = 1 / (self.dot00 * self.dot11 - self.dot01 * self.dot01)
 
-    def collision(x,y):
+    def inside(self,x,y):
         # Le point est-il dans l'obstacle ?
         dot02=self.u[0]*x + self.u[1]*y
         dot12=self.v[0]*x + self.v[1]*y
-        k = (self.dot11 * dot02 - self.dot01 * dot12) * invDenom
-        j = (self.dot00 * dot12 - self.dot01 * dot02) * invDenom
+        k = (self.dot11 * dot02 - self.dot01 * dot12) * self.invDenom
+        j = (self.dot00 * dot12 - self.dot01 * dot02) * self.invDenom
         return (k >= 0 and j >= 0 and k + j <=1)
 
-    def visible(Cx,Cy,Dx,Dy):
+    def visible(self,Cx,Cy,Dx,Dy):
         # Calcule si C est visible depuis D
         Ax=self.points[4]
         Ay=self.points[5]
@@ -59,11 +61,26 @@ class Space:
         brdD1=Obstacle([width+10,0,width,height,width+10,height])
         self.obstacles=[brdH0,brdH1,brdG0,brdG1,brdB0,brdB1,brdD0,brdD1]
         
+    def addObstacle(self,obs):
+        self.obstacles+=[obs]
+
+    def visible(self,x1,y1,x2,y2):
+        for obs in self.obstacles:
+            if not obs.visible(x1,y1,x2,y2):
+                return False
+        return True
+
+    def isFree(self,x,y):
+        for obs in self.obstacles:
+            if obs.inside(x,y):
+                return False
+        return True
+    
 
 class Displayer():
     
-    def __init__(self, space):
-        self.master=Tk()
+    def __init__(self, master, space):
+        self.master=master
         self.w=Canvas(self.master,width=space.width,height=space.height)
         self.w.pack()
         self.space=space
@@ -80,7 +97,16 @@ class Displayer():
         for obs in self.space.obstacles:
             self.drawObstacle(obs)
 
-t=Space(500,600)
-d=Displayer(t)
-
-mainloop()
+    def drawGraph(self,graphe):
+        points=graphe.points
+        adj=graphe.adjacence
+        print(adj)
+        for i in range(len(points)):
+            Ax=points[i][0]
+            Ay=points[i][1]
+            for j in adj[i]:
+                if j<=i:
+                    continue
+                self.w.create_line(Ax,Ay,points[j][0],points[j][1],fill="black")
+        self.w.create_oval(points[0][0]-2,points[0][1]-2,points[0][0]+2,points[0][1]+2,fill="red")
+        self.w.create_oval(points[1][0]-2,points[1][1]-2,points[1][0]+2,points[1][1]+2,fill="red")
