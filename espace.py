@@ -1,5 +1,5 @@
 
-from Tkinter import *
+from tkinter import *
 
 # Structures de donnees et fonction d'interface
 

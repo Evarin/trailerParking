@@ -1,5 +1,5 @@
 from espace import *
-from Tkinter import *
+from tkinter import *
 import pathFinder
 
 space=Space(600,600)
