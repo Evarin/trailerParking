@@ -1,2 +1,2 @@
-# Trouve un chemin réalisable par le robot
-# à partir d'un chemin théorique
+# Trouve un chemin realisable par le robot
+# a partir d'un chemin theorique

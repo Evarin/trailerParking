@@ -1,5 +1,5 @@
 # Trouve un chemin entre deux configurations
-# pas forcément réalisable par le robot
+# pas forcement realisable par le robot
 
 import random
 
@@ -52,7 +52,7 @@ class PathGraph():
             return ci
 
 def findPath(space,start,end):
-    # Trouve un chemin par échantillonage aléatoire
+    # Trouve un chemin par echantillonage aleatoire
     random.seed()
     graphe=PathGraph([start,end])
     if space.visible(start[0],start[1],end[0],end[1]):

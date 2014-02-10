@@ -1,7 +1,7 @@
 
-from tkinter import *
+from Tkinter import *
 
-# Structures de données et fonction d'interface
+# Structures de donnees et fonction d'interface
 
 class Obstacle:
     # Obstacle triangulaire
