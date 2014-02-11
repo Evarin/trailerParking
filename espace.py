@@ -3,6 +3,18 @@ from tkinter import *
 
 # Structures de donnees et fonction d'interface
 
+# Configuration 
+class Robot:
+    l=1.
+    trailerWidth=1.
+    trailerLength=2.
+    steerWidth=1.
+    steerLength=1.
+
+    @staticmethod
+    def conf2practice(q):
+        return [q[0], q[1], q[2], q[2] - math.atan(Robot.l*q[3])]
+
 class Obstacle:
     # Obstacle triangulaire
     
@@ -64,7 +76,8 @@ class Space:
     def addObstacle(self,obs):
         self.obstacles+=[obs]
 
-    def visible(self,x1,y1,x2,y2):
+    def visible(self, x1, y1, x2, y2):
+        # TODO : considérer un tunnel
         for obs in self.obstacles:
             if not obs.visible(x1,y1,x2,y2):
                 return False
@@ -76,6 +89,15 @@ class Space:
                 return False
         return True
     
+    def collision(self, q):
+        # TODO
+        return False
+
+    def collisionAny(self, qs):
+        for q in qs:
+            if self.collision(q):
+                return True
+        return False
 
 class Displayer():
     
@@ -110,3 +132,18 @@ class Displayer():
                 self.w.create_line(Ax,Ay,points[j][0],points[j][1],fill="black")
         self.w.create_oval(points[0][0]-2,points[0][1]-2,points[0][0]+2,points[0][1]+2,fill="red")
         self.w.create_oval(points[1][0]-2,points[1][1]-2,points[1][0]+2,points[1][1]+2,fill="red")
+
+    def drawPath(self, points):
+        q=points[0]
+        for p in points[1:]:
+            self.w.create_line(q[0], q[1], p[0], p[1], fill="red")
+            q=p
+
+    def drawCurves(self, curves):
+        for c in curves:
+            points=c.sample(50)
+            q=points[0]
+            for p in points[1:]:
+                self.w.create_line(q[0], q[1], p[0], p[1], fill="green")
+                q=p
+            

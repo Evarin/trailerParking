@@ -3,6 +3,7 @@
 
 import random
 from heapq import *
+import math
 
 ################################################################################
 
@@ -31,9 +32,9 @@ class PathGraph():
     def reachable(self, i, j):
         return self.getConn(i) == self.getConn(j)
 
-    def addPoint(self, x, y):
+    def addPoint(self, p):
         j = len(self.points)
-        self.points += [[x, y]]
+        self.points += [p]
         self.invconn += [len(self.connexes)]
         self.assoconn += [len(self.connexes)]
         self.connexes += [[j]]
@@ -58,6 +59,8 @@ class PathGraph():
         
 def findPath(space, start, end):
     # Trouve un chemin par echantillonage aleatoire
+    start=start[0:2]
+    end=end[0:2]
     random.seed()
     graphe = PathGraph([start, end])
     if space.visible(start[0], start[1], end[0], end[1]):
@@ -67,20 +70,20 @@ def findPath(space, start, end):
         y = random.randint(1, space.height-1)
         if not space.isFree(x, y):
             continue
-        j = graphe.addPoint(x, y)
+        j = graphe.addPoint([x, y])
         for p in range(len(graphe.points)):
             if not p == j and space.visible(x, y, graphe.points[p][0], graphe.points[p][1]):
                 graphe.link(p, j)
-    return graphe
+    return graphe, dijkstra(graphe)
 
 ################################################################################
 
 def voisins(graphe, pt):
     v = []
-    ptx, pty = graphe.points[pt]
+    x1, y1 = graphe.points[pt]
     for i in graphe.adjacence[pt]:
-        x, y = graphe.points[i]
-        v += [(sqrt( (x2 - x1)**2 + (y2 - y1)**2 ), i)]
+        x2, y2 = graphe.points[i]
+        v += [(math.sqrt( (x2 - x1)**2 + (y2 - y1)**2 ), i)]
     return v
 
 def dijkstra (graphe):
@@ -103,13 +106,45 @@ def dijkstra (graphe):
                 heappush(suivants, (dy, y))
                 p[y] = x
 
-    path = [graphe.point[1]]
+    path = [graphe.points[1]]
     x = 1
     while x != 0:
         x = p[x]
-        path.insert(0, graphe.point[x])
+        path.insert(0, graphe.points[x])
         
-    return d[1], path
+    return path
 
 
 ################################################################################
+
+# q=x, y, theta, kappa
+
+def interpol(q1, q2, n):
+    k=len(q1)
+    if math.abs(2*math.pi+q1[2]-q2[2])<math.abs(q1[2]-q2[2]):
+        q1[2]=q1[2]+2*math.pi
+    return [ [q1[j]*(1-t/n) + q2[j]*(t/n) for j in range(k)] for t in range(n+1)]
+
+def findConfPath(q1, q2, space):
+    # Trouve un chemin par echantillonage aleatoire
+    random.seed()
+    graphe = PathGraph([q1, q2])
+    mu = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2]
+    sigma = [math.abs(q1[0] - mu[0])*2, math.abs(q1[1] - mu[1])*2]
+    while not graphe.reachable(0, 1):
+        x = random.gauss(mu[0], sigma[0])
+        y = random.gauss(mu[1], sigma[1])
+        t = random.random() * 2 * math.pi
+        k = (random.random() + .5) * 5 # VRAIES VALEURS ????
+        q = [x, y, t, k]
+        if space.collision(q):
+            continue
+        j = graphe.addPoint(q)
+        for p in range(len(graphe.points)):
+            if p == j:
+                continue
+            pts = interpolation(q, graphe.points[p], 30)
+            if space.collisionAny(pts):
+                continue
+            graphe.link(p, j)
+    return graphe

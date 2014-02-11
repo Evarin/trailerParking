@@ -3,6 +3,7 @@
 
 import math
 import espace
+import pathFinder
 
 ################################################################################
 
@@ -11,48 +12,56 @@ class Courbe():
     def __init__(self, q1, q2):
         self.q1 = q1
         self.q2 = q2
-        self.v = 0 
+        self.v = 1.
         
     def sample_point(self,u):
         alpha = math.sin(math.pi/2 * (math.sin((u/self.v)*math.pi/2)**2))**2
         # a(x)=1-cos^2(pi/2*(1-cos^2(x*pi/2)))
+        QQ1 = self.q1
+        QQ2 = self.q2
         x = (1-alpha)*(QQ1[0] + (1/QQ1[3])*(1 ))
                 # OMGWTFBBQ : pizza
-                                     
-                   )
+                #                     
+                #   )
 
-        y = alpha*gamma2[1] + (1-alpha)*gamma1[1]
+        y = (1-alpha)*(QQ1[1] + (1/QQ1[3])*(1 ))
+        return [x, y, QQ1[2], QQ1[3]]
 
     def sample(self, n):
-        return [self.sample_point((self.v)*k/n) for k in range(n)]
+        return [self.sample_point((self.v)*k/n) for k in range(n+1)]
+
+    @staticmethod
+    def buildCurves(qpath):
+        return [Courbe(qpath[k], qpath[k+1]) for k in range(len(qpath)-1)]
 
 ################################################################################
 
-def dichotom(q1, q2):
+def dichotomie(q1, q2):
     # OMGWTFBBQ : SUSHI
-    return []
+    return [Courbe(q1,q2)]
 
-def confToConf(q):
-    return [q[0], q[1], q[2], q[2] - math.atan(espace.Robot.l*q[3])]
-
-def pathSolve(qBegin, qEnd, path):
+def solvePath(space, qBegin, qEnd, path):
     curves = []
-    q2 = qBegin
+    
+    qpath = [qBegin]
     for k in range(1, len(path)-1):
-        q1 = q2
-        q2 = path[k] + [orientation, courbure]      # <- OMGWTFBBQ : pizza
-        curves += [Courbe(q1, q2)]
-    q1 = q2
-    q2 = qEnd
-    curves += [Courbe(q1, q2)]
-
+        # Bullshit
+        orientation = 0. # TEMP
+        courbure = 1. # TEMP
+        qpath += [ path[k] + [orientation, courbure] ]     # <- OMGWTFBBQ : pizza
+    qpath += [qEnd]
+    
     curves_final = []
-    for c in curves:
-        # si collision avec obstacle [avec sampling]  # <- TODO #
-        #     >> path graphe des configurations
-        #     >> dichotomie sur chaque segment
-        # sinon
-        curves_final += [c]
+    for c in Courbe.buildCurves(qpath):
+        qs=c.sample(30)
+        if space.collisionAny(qs):
+            subPath=pathFinder.findConfPath(c.q1,c.q2) # Liste d'états q
+            q1=subPath[0]
+            for q2 in subPath[1:]:
+                curves_final += dichotomie(q1,q2)
+                q1=q2
+        else:
+            curves_final += [c]
     return curves_final
 
         
