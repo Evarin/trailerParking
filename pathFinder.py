@@ -22,7 +22,7 @@ class PathGraph():
         nc = self.assoconn[c]
         if nc == c:
             return c
-        while self.assoconn[nc]! = nc:
+        while self.assoconn[nc] != nc:
             nc = self.assoconn[nc]
         self.assoconn[c] = nc
         self.invconn[i] = nc
@@ -88,7 +88,7 @@ def dijkstra (graphe):
     d = {0: 0}
     p = {}
     suivants = [(0, 0)]
-    while suivants != []:
+    while len(suivants)>0:
         dx, x = heappop(suivants)
         if x in M:
             continue
