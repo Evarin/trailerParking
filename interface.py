@@ -30,16 +30,13 @@ class Displayer():
     def drawGraph(self,graphe):
         points = graphe.points
         adj = graphe.adjacence
-        print(adj)
         for i in range(len(points)):
             Ax = points[i][0]
             Ay = points[i][1]
             for j in adj[i]:
                 if j<=i:
                     continue
-                self.canvas.create_line(Ax, Ay, points[j][0], points[j][1], fill="black")
-        self.canvas.create_oval(points[0][0]-2, points[0][1]-2, points[0][0]+2, points[0][1]+2, fill="red")
-        self.canvas.create_oval(points[1][0]-2, points[1][1]-2, points[1][0]+2, points[1][1]+2, fill="red")
+                self.canvas.create_line(Ax, Ay, points[j][0], points[j][1], fill="grey")
 
     def drawPath(self, points):
         q=points[0]

@@ -4,6 +4,7 @@
 import random
 from heapq import *
 import math
+from espace import *
 
 ################################################################################
 
@@ -72,7 +73,13 @@ def findPath(space, start, end):
             continue
         j = graphe.addPoint([x, y])
         for p in range(len(graphe.points)):
-            if not p == j and space.visible(x, y, graphe.points[p][0], graphe.points[p][1]):
+            if p==j:
+                continue
+            px, py = graphe.points[p]
+            nrm=math.sqrt((y-py)**2 + (x-px)**2)
+            perp=[(y-py)*Robot.trailerWidth/nrm, (px-x)*Robot.trailerWidth/nrm]
+            if space.visible(x, y, px, py) and space.visible(x-perp[0], y-perp[1], px-perp[0], py-perp[1]) \
+                    and space.visible(x+perp[0], y+perp[1], px+perp[0], py+perp[1]):
                 graphe.link(p, j)
     return graphe, dijkstra(graphe)
 

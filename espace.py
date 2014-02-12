@@ -10,7 +10,7 @@ class Robot:
 
     @staticmethod
     def conf2practice(q):
-        return [q[0], q[1], q[2], q[2] - math.atan(Robot.l*q[3])]
+        return [q[0], q[1], q[2], q[2] - math.atan(Robot.l * q[3])]
 
 ##############################################################################
 
