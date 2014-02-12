@@ -2,11 +2,11 @@
 
 # Configuration 
 class Robot:
-    l=1.
-    trailerWidth=1.
-    trailerLength=2.
-    steerWidth=1.
-    steerLength=1.
+    l=50.
+    trailerWidth=30.
+    trailerLength=60.
+    steerWidth=20.
+    steerLength=20.
 
     @staticmethod
     def conf2practice(q):
@@ -73,6 +73,8 @@ class Space:
         brdD0=Obstacle([width,0,width,height,width+10,0])
         brdD1=Obstacle([width+10,0,width,height,width+10,height])
         self.obstacles=[brdH0,brdH1,brdG0,brdG1,brdB0,brdB1,brdD0,brdD1]
+        self.qBegin=[100,100,3,0]
+        self.qEnd=[400,100,5,0]
         
     def addObstacle(self,obs):
         self.obstacles+=[obs]
