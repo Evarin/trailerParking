@@ -12,20 +12,23 @@ class Courbe():
     def __init__(self, q1, q2):
         self.q1 = q1
         self.q2 = q2
-        self.v = 1.
+        vx = self.q2[0] - self.q1[0] + (math.sin(self.q1[2]) / self.q1[3])
+        vy = self.q2[1] - self.q1[1] - (math.cos(self.q1[2]) / self.q1[3])
+        phi = 2 * math.atan( vy / (vx + sqrt(vx**2 + vy**2) )) + (math.pi / 2)
+        self.v = (phi - self.q1[2]) / self.q1[3]
         
     def sample_point(self,u):
         alpha = math.sin(math.pi/2 * (math.sin((u/self.v)*math.pi/2)**2))**2
-        # a(x)=1-cos^2(pi/2*(1-cos^2(x*pi/2)))
         QQ1 = self.q1
         QQ2 = self.q2
-        x = (1-alpha)*(QQ1[0] + (1/QQ1[3])*(1 ))
-                # OMGWTFBBQ : pizza
-                #                     
-                #   )
+        x = (1-alpha)*(  QQ1[0] + (1/QQ1[3])*( math.sin(QQ1[2]+QQ1[3]*u) - math.sin(QQ1[2]) )  ) \
+            alpha*(  QQ2[0] + (1/QQ2[3])*( math.sin(QQ2[2]+QQ2[3]*(u-self.v)) - math.sin(QQ2[2]) )  )
+        y = (1-alpha)*(  QQ1[1] + (1/QQ1[3])*( math.cos(QQ1[2]) - math.cos(QQ1[2]+QQ1[3]*u) )  ) \
+            alpha*(  QQ2[1] + (1/QQ2[3])*( math.cos(QQ2[2]) - math.cos(QQ2[2]+QQ2[3]*(u-self.v)) )  )
+        tau = (1-alpha)*(QQ1[2] + QQ1[3]*u) + alpha*(QQ2[2] + QQ2[3]*(u-self.v))
+        kappa = (1-alpha)*QQ1[3] + alpha*QQ2[3]
 
-        y = (1-alpha)*(QQ1[1] + (1/QQ1[3])*(1 ))
-        return [x, y, QQ1[2], QQ1[3]]
+        return [x, y, tau, kappa]
 
     def sample(self, n):
         return [self.sample_point((self.v)*k/n) for k in range(n+1)]
@@ -46,9 +49,10 @@ def solvePath(space, qBegin, qEnd, path):
     qpath = [qBegin]
     for k in range(1, len(path)-1):
         # Bullshit
-        orientation = 0. # TEMP
-        courbure = 1. # TEMP
-        qpath += [ path[k] + [orientation, courbure] ]     # <- OMGWTFBBQ : pizza
+        orientation = math.atan((path[k][2]-path[k-1][2]) / ((path[k][1]-path[k-1][1]) + sqrt((path[k][1]-path[k-1][1])**2 + (path[k][2]-path[k-1][2])**2) ) ) \
+            +  math.atan((path[k+1][2]-path[k][2]) / ((path[k+1][1]-path[k][1]) + sqrt((path[k+1][1]-path[k][1])**2 + (path[k+1][2]-path[k][2])**2) ) )
+        courbure = 1. # OMGWTFBBQ : PIZZA
+        qpath += [ path[k] + [orientation, courbure] ]
     qpath += [qEnd]
     
     curves_final = []
@@ -68,21 +72,21 @@ def solvePath(space, qBegin, qEnd, path):
 ################################################################################
 #  A - Algorithmique
 #
-#    1 - lissage courbes              <- V : omgwtfbbq : pizza
-#    2 - collision de configuration      R : TODO
-#    3 - graphe de configuration         R~V
-#    4 - dichotomie                   <- V : OMGWTFBBQ : SUSHI
-#   (5 - ameliorations)
+#      1 - lissage courbes              <- V
+#      2 - collision de configuration      R : TODO
+#      3 - graphe de configuration         R~V
+#      4 - dichotomie                   <- V : OMGWTFBBQ : SUSHI
+#     (5 - ameliorations)
 #
-#   (6 - Voronoi)                     <-
+#     (6 - Voronoi)                     <-
 #
 #
-#  B - Graphique 
-#
-#    1  - Affichage trajectoire          <- R
-#    2a - Rajout obstacle                   R
-#    2b - Rajout début/fin               <- R/V
-#    3  - Animation de la trajectoire    <- R
-#   (4  - Passage en 3D)
+#    B - Graphique 
+#  
+#      1  - Affichage trajectoire          <- R
+#      2a - Rajout obstacle                   R
+#      2b - Rajout début/fin               <- R/V
+#      3  - Animation de la trajectoire    <- R
+#     (4  - Passage en 3D)
 #
 ################################################################################
