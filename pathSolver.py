@@ -14,7 +14,7 @@ class Courbe():
         self.q2 = q2
         vx = self.q2[0] - self.q1[0] + (math.sin(self.q1[2]) / self.q1[3])
         vy = self.q2[1] - self.q1[1] - (math.cos(self.q1[2]) / self.q1[3])
-        phi = 2 * math.atan( vy / (vx + sqrt(vx**2 + vy**2) )) + (math.pi / 2)
+        phi = 2 * math.atan( vy / (vx + math.sqrt(vx**2 + vy**2) )) + (math.pi / 2)
         self.v = (phi - self.q1[2]) / self.q1[3]
         
     def sample_point(self,u):
@@ -22,9 +22,9 @@ class Courbe():
         QQ1 = self.q1
         QQ2 = self.q2
         x = (1-alpha)*(  QQ1[0] + (1/QQ1[3])*( math.sin(QQ1[2]+QQ1[3]*u) - math.sin(QQ1[2]) )  ) \
-            alpha*(  QQ2[0] + (1/QQ2[3])*( math.sin(QQ2[2]+QQ2[3]*(u-self.v)) - math.sin(QQ2[2]) )  )
+           + alpha*(  QQ2[0] + (1/QQ2[3])*( math.sin(QQ2[2]+QQ2[3]*(u-self.v)) - math.sin(QQ2[2]) )  )
         y = (1-alpha)*(  QQ1[1] + (1/QQ1[3])*( math.cos(QQ1[2]) - math.cos(QQ1[2]+QQ1[3]*u) )  ) \
-            alpha*(  QQ2[1] + (1/QQ2[3])*( math.cos(QQ2[2]) - math.cos(QQ2[2]+QQ2[3]*(u-self.v)) )  )
+           + alpha*(  QQ2[1] + (1/QQ2[3])*( math.cos(QQ2[2]) - math.cos(QQ2[2]+QQ2[3]*(u-self.v)) )  )
         tau = (1-alpha)*(QQ1[2] + QQ1[3]*u) + alpha*(QQ2[2] + QQ2[3]*(u-self.v))
         kappa = (1-alpha)*QQ1[3] + alpha*QQ2[3]
 
@@ -49,8 +49,8 @@ def solvePath(space, qBegin, qEnd, path):
     qpath = [qBegin]
     for k in range(1, len(path)-1):
         # Bullshit
-        orientation = math.atan((path[k][2]-path[k-1][2]) / ((path[k][1]-path[k-1][1]) + sqrt((path[k][1]-path[k-1][1])**2 + (path[k][2]-path[k-1][2])**2) ) ) \
-            +  math.atan((path[k+1][2]-path[k][2]) / ((path[k+1][1]-path[k][1]) + sqrt((path[k+1][1]-path[k][1])**2 + (path[k+1][2]-path[k][2])**2) ) )
+        orientation = math.atan((path[k][1]-path[k-1][1]) / ((path[k][0]-path[k-1][0]) + math.sqrt((path[k][0]-path[k-1][0])**2 + (path[k][1]-path[k-1][1])**2) ) ) \
+            +  math.atan((path[k+1][1]-path[k][1]) / ((path[k+1][0]-path[k][0]) + math.sqrt((path[k+1][0]-path[k][0])**2 + (path[k+1][1]-path[k][1])**2) ) )
         courbure = 1. # OMGWTFBBQ : PIZZA
         qpath += [ path[k] + [orientation, courbure] ]
     qpath += [qEnd]
