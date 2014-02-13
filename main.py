@@ -17,7 +17,12 @@ def computePath(space, displayer):
     curves = pathSolver.solvePath(space, qBegin, qEnd, path)
     
     displayer.refreshAll()
-    #displayer.drawGraph(graphe)
+    
+    # for c in curves:
+    #     displayer.drawPath(c.canonicalCurveSample(c.q1, 50, -100, 100))
+
+
+    # displayer.drawGraph(graphe)
     displayer.drawPath(path)
     displayer.drawCurves(curves)
     
