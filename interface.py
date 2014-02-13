@@ -42,26 +42,26 @@ class Displayer():
         self.canvas.create_oval(points[1][0]-2, points[1][1]-2, points[1][0]+2, points[1][1]+2, fill="red")
 
     def drawPath(self, points):
-        q=points[0]
+        q = points[0]
         for p in points[1:]:
             self.canvas.create_line(q[0], q[1], p[0], p[1], fill="red")
-            q=p
+            q = p
 
     def drawCurves(self, curves):
         for c in curves:
-            points=c.sample(50)
-            q=points[0]
+            points = c.sample(50)
+            q = points[0]
             for p in points[1:]:
                 self.canvas.create_line(q[0], q[1], p[0], p[1], fill="green")
-                q=p
-            
+                q = p
+      
     def getSpace(self):
         return self.space
         
     def drawConfig(self, q):
-        x=q[0]
-        y=q[1]
-        t1=q[2]
+        x = q[0]
+        y = q[1]
+        t1 = q[2]
         obj = []
         v1 = rotate([Robot.trailerLength/2, Robot.trailerWidth/2], t1)
         v2 = rotate([Robot.trailerLength/2, -Robot.trailerWidth/2], t1)

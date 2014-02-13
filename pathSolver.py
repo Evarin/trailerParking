@@ -7,6 +7,19 @@ import pathFinder
 
 ################################################################################
 
+
+def canonicalConf(q, u):
+    x = q[0] + (1/q[3])*( math.sin(q[2]+q[3]*u) - math.sin(q[2]) )
+    y = q[1] + (1/q[3])*( math.cos(q[2]) - math.cos(q[2]+q[3]*u) )
+    tau = q[2] + q[3]*u
+    kappa = q[3]
+    return [x, y, tau, kappa]
+
+
+################################################################################
+
+
+
 class Courbe():
     
     def __init__(self, q1, q2):
@@ -19,19 +32,28 @@ class Courbe():
         
     def sample_point(self,u):
         alpha = math.sin(math.pi/2 * (math.sin((u/self.v)*math.pi/2)**2))**2
-        QQ1 = self.q1
-        QQ2 = self.q2
-        x = (1-alpha)*(  QQ1[0] + (1/QQ1[3])*( math.sin(QQ1[2]+QQ1[3]*u) - math.sin(QQ1[2]) )  ) \
-           + alpha*(  QQ2[0] + (1/QQ2[3])*( math.sin(QQ2[2]+QQ2[3]*(u-self.v)) - math.sin(QQ2[2]) )  )
-        y = (1-alpha)*(  QQ1[1] + (1/QQ1[3])*( math.cos(QQ1[2]) - math.cos(QQ1[2]+QQ1[3]*u) )  ) \
-           + alpha*(  QQ2[1] + (1/QQ2[3])*( math.cos(QQ2[2]) - math.cos(QQ2[2]+QQ2[3]*(u-self.v)) )  )
-        tau = (1-alpha)*(QQ1[2] + QQ1[3]*u) + alpha*(QQ2[2] + QQ2[3]*(u-self.v))
+        QQ1 = canonicalConf(self.q1, u)
+        QQ2 = canonicalConf(self.q2, u-self.v)
+        x = (1-alpha)*QQ1[0] + alpha*QQ2[0]
+        y = (1-alpha)*QQ1[1] + alpha*QQ2[1]
+        tau = (1-alpha)*QQ1[2] + alpha*QQ2[2]
         kappa = (1-alpha)*QQ1[3] + alpha*QQ2[3]
-
         return [x, y, tau, kappa]
 
     def sample(self, n):
         return [self.sample_point((self.v)*k/n) for k in range(n+1)]
+
+
+
+    # Fonction d'affichage de la courbe canonique d'une configuration
+    # DEBUG       vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    
+    def canonicalCurveSample(self, q, n, d, f):
+        return [canonicalConf(q, d + k*((f-d)/n)) for k in range(n+1)]
+    
+    # DEBUG       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # Fonction d'affichage de la courbe canonique d'une configuration
+
 
     @staticmethod
     def buildCurves(qpath):

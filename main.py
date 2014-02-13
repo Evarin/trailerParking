@@ -7,8 +7,8 @@ import pathSolver
 
 space=Space(600,600)
 
-space.qBegin=[50, 300, 0., 0.3]
-space.qEnd=[500, 200, math.pi/2, 0.1]
+space.qBegin=[50, 100, 0., 0.2]
+space.qEnd=[500, 400, math.pi/2, 0.1]
 
 def computePath(space, displayer):
     qBegin=space.qBegin
@@ -17,9 +17,13 @@ def computePath(space, displayer):
     print(path)
     curves = pathSolver.solvePath(space, qBegin, qEnd, path)
     
-    #displayer.drawGraph(graphe)
+    # for c in curves:
+    #     displayer.drawPath(c.canonicalCurveSample(c.q1, 50, -100, 100))
+
+
+    # displayer.drawGraph(graphe)
     displayer.drawPath(path)
-    #displayer.drawCurves(curves)
+    # displayer.drawCurves(curves)
     
 initInterface(space, computePath)
 
