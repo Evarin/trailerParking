@@ -24,10 +24,10 @@ class Displayer():
         self.canvas.create_rectangle(0, 0, self.space.width, self.space.height, fill="white")
         for obs in self.space.obstacles:
             self.drawObstacle(obs)
-        self.drawConfig(self.space.qBegin)
-        self.drawConfig(self.space.qEnd)
+        self.drawConfig(Robot.kappa2theta(self.space.qBegin))
+        self.drawConfig(Robot.kappa2theta(self.space.qEnd))
 
-    def drawGraph(self,graphe):
+    def drawGraph(self, graphe, color="grey"):
         points = graphe.points
         adj = graphe.adjacence
         for i in range(len(points)):
@@ -36,42 +36,44 @@ class Displayer():
             for j in adj[i]:
                 if j<=i:
                     continue
-                self.canvas.create_line(Ax, Ay, points[j][0], points[j][1], fill="grey")
+                self.canvas.create_line(Ax, Ay, points[j][0], points[j][1], fill=color)
 
-    def drawPath(self, points):
+    def drawPath(self, points, color="red"):
         q = points[0]
         for p in points[1:]:
-            self.canvas.create_line(q[0], q[1], p[0], p[1], fill="red")
+            self.canvas.create_line(q[0], q[1], p[0], p[1], fill=color)
             q = p
 
-    def drawCurves(self, curves):
+    def drawCurves(self, curves, color="green"):
         for c in curves:
             points = c.sample(50)
             q = points[0]
             for p in points[1:]:
-                self.canvas.create_line(q[0], q[1], p[0], p[1], fill="green")
+                self.canvas.create_line(q[0], q[1], p[0], p[1], fill=color)
                 q = p
       
     def getSpace(self):
         return self.space
         
-    def drawConfig(self, q):
-        x = q[0]
-        y = q[1]
-        t1 = q[2]
+    def drawConfig(self, r, color="yellow"):
+        x, y, t1 = r[0:3]
         obj = []
         v1 = rotate([Robot.trailerLength/2, Robot.trailerWidth/2], t1)
         v2 = rotate([Robot.trailerLength/2, -Robot.trailerWidth/2], t1)
-        obj += [self.canvas.create_polygon([x+v1[0], y+v1[1], x+v2[0], y+v2[1], x-v1[0], y-v1[1], x-v2[0], y-v2[1]], fill="yellow")]
+        obj += [self.canvas.create_polygon([x+v1[0], y+v1[1], x+v2[0], y+v2[1], x-v1[0], y-v1[1], x-v2[0], y-v2[1]], fill=color)]
         x2 = x + Robot.l*math.cos(t1)
         y2 = y + Robot.l*math.sin(t1)
-        if len(q)>3:
-            t2=q[3]
+        if len(r)>3:
+            t2=r[3]
             v1 = rotate([Robot.steerLength/2, Robot.steerWidth/2], t2)
             v2 = rotate([Robot.steerLength/2, -Robot.steerWidth/2], t2)
-            obj += [self.canvas.create_polygon([x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1], x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]], fill="yellow")]
+            obj += [self.canvas.create_polygon([x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1], x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]], fill=color)]
         obj += [self.canvas.create_line(x, y, x2, y2, fill="black")]
         return obj
+
+    def drawConfigs(self, rs, color="yellow"):
+        for r in rs:
+            self.drawConfig(r, color)
 
 def rotate(v, theta):
     return [v[0]*math.cos(theta)-v[1]*math.sin(theta), v[1]*math.cos(theta)+v[0]*math.sin(theta)]

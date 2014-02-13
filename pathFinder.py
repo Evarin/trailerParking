@@ -78,8 +78,10 @@ def findPath(space, start, end):
             px, py = graphe.points[p]
             nrm=math.sqrt((y-py)**2 + (x-px)**2)
             perp=[(y-py)*Robot.trailerWidth/nrm, (px-x)*Robot.trailerWidth/nrm]
+            theta=math.atan2(y-py, x-px)
             if space.visible(x, y, px, py) and space.visible(x-perp[0], y-perp[1], px-perp[0], py-perp[1]) \
-                    and space.visible(x+perp[0], y+perp[1], px+perp[0], py+perp[1]):
+                    and space.visible(x+perp[0], y+perp[1], px+perp[0], py+perp[1]) \
+                    and not space.collision([x, y, theta, theta]) and not space.collision([px, py, theta, theta]):
                 graphe.link(p, j)
     return graphe, dijkstra(graphe)
 
@@ -87,9 +89,9 @@ def findPath(space, start, end):
 
 def voisins(graphe, pt):
     v = []
-    x1, y1 = graphe.points[pt]
+    x1, y1 = graphe.points[pt][0:2]
     for i in graphe.adjacence[pt]:
-        x2, y2 = graphe.points[i]
+        x2, y2 = graphe.points[i][0:2]
         v += [(math.sqrt( (x2 - x1)**2 + (y2 - y1)**2 ), i)]
     return v
 
@@ -126,32 +128,35 @@ def dijkstra (graphe):
 
 # q=x, y, theta, kappa
 
-def interpol(q1, q2, n):
+def interpolation(q1, q2, n):
     k=len(q1)
-    if math.abs(2*math.pi+q1[2]-q2[2])<math.abs(q1[2]-q2[2]):
+    if abs(2*math.pi+q1[2]-q2[2])<abs(q1[2]-q2[2]):
         q1[2]=q1[2]+2*math.pi
     return [ [q1[j]*(1-t/n) + q2[j]*(t/n) for j in range(k)] for t in range(n+1)]
 
-def findConfPath(q1, q2, space):
+def findConfPath(space, q1, q2):
     # Trouve un chemin par echantillonage aleatoire
     random.seed()
     graphe = PathGraph([q1, q2])
     mu = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2]
-    sigma = [math.abs(q1[0] - mu[0])*2, math.abs(q1[1] - mu[1])*2]
+    sigma = [abs(q1[0] - mu[0])*2, abs(q1[1] - mu[1])*2]
     while not graphe.reachable(0, 1):
         x = random.gauss(mu[0], sigma[0])
         y = random.gauss(mu[1], sigma[1])
         t = random.random() * 2 * math.pi
-        k = (random.random() + .5) * 5 # VRAIES VALEURS ????
+        k = random.random() * 0.01 + .0001 # VRAIES VALEURS ????
         q = [x, y, t, k]
+        print(q)
         if space.collision(q):
             continue
         j = graphe.addPoint(q)
         for p in range(len(graphe.points)):
             if p == j:
                 continue
-            pts = interpolation(q, graphe.points[p], 30)
+            if not space.visible(x, y, graphe.points[p][0], graphe.points[p][1]):
+                continue
+            pts = interpolation(q, graphe.points[p], 100)
             if space.collisionAny(pts):
                 continue
             graphe.link(p, j)
-    return graphe
+    return dijkstra(graphe)

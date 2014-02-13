@@ -14,7 +14,6 @@ def computePath(space, displayer):
     qBegin=space.qBegin
     qEnd=space.qEnd
     graphe, path = pathFinder.findPath(space,qBegin,qEnd)
-    curves = pathSolver.solvePath(space, qBegin, qEnd, path)
     
     displayer.refreshAll()
     
@@ -23,8 +22,19 @@ def computePath(space, displayer):
 
 
     # displayer.drawGraph(graphe)
-    displayer.drawPath(path)
-    displayer.drawCurves(curves)
+    displayer.drawPath(path, "pink")
+    
+    qpath, ocurves, ccurves = pathSolver.solvePath(space, qBegin, qEnd, path)
+
+    
+    pos=[]
+    for c in ocurves:
+        pos+=[Robot.kappa2theta(q) for q in c.sample(5)]
+    displayer.drawConfigs(pos)
+
+    displayer.drawPath(qpath)
+    displayer.drawCurves(ocurves)
+    displayer.drawCurves(ccurves,"black")
     
 initInterface(space, computePath)
 

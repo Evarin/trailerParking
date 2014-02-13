@@ -2,7 +2,7 @@
 # a partir d'un chemin theorique
 
 import math
-import espace
+from espace import *
 import pathFinder
 
 ################################################################################
@@ -15,6 +15,16 @@ def canonicalConf(q, u):
     kappa = q[3]
     return [x, y, tau, kappa]
 
+
+def canonicaldConf(q, u):
+    x = math.cos(q[2]+q[3]*u)
+    y = math.sin(q[2]+q[3]*u)
+    return [x, y]
+
+def canonicald2Conf(q, u):
+    x = - q[3] * math.sin(q[2]+q[3]*u)
+    y = q[3] * math.cos(q[2]+q[3]*u)
+    return [x, y]
 
 ################################################################################
 
@@ -31,13 +41,28 @@ class Courbe():
         self.v = (phi - self.q1[2]) / self.q1[3]
         
     def sample_point(self,u):
-        alpha = math.sin(math.pi/2 * (math.sin((u/self.v)*math.pi/2)**2))**2
+        # alpha(u) = sin²( pi/2 * sin²(pi/2 * u/v))
+        SIN2=math.sin((u/self.v)*math.pi/2)**2
+        alpha = math.sin(math.pi/2 * SIN2)**2
+        # dalpha(u) = (π^2 sin((π u)/v) sin(π sin^2((π u)/(2 v))))/(4 v)
+        dalpha = math.pi**2 /4 /self.v * math.sin(math.pi*u/self.v) * math.sin(math.pi * SIN2)
+        # d2alpha(u) = (π^3 (π cos(π sin^2((π u)/(2 v))) sin^2((π u)/v)+2 cos((π u)/v) sin(π sin^2((π u)/(2 v)))))/(8 v^2)
         QQ1 = canonicalConf(self.q1, u)
         QQ2 = canonicalConf(self.q2, u-self.v)
         x = (1-alpha)*QQ1[0] + alpha*QQ2[0]
         y = (1-alpha)*QQ1[1] + alpha*QQ2[1]
-        tau = (1-alpha)*QQ1[2] + alpha*QQ2[2]
-        kappa = (1-alpha)*QQ1[3] + alpha*QQ2[3]
+        tau = (1-alpha)*QQ1[2] + alpha*QQ2[2]  # FAUX
+        # tau = arctan(dy/dx) (+pi) = atan2(dy, dx)
+        dQQ1 = canonicaldConf(self.q1, u)
+        dQQ2 = canonicaldConf(self.q2, u-self.v)
+        d2QQ1 = canonicald2Conf(self.q1, u)
+        d2QQ2 = canonicald2Conf(self.q2, u-self.v)
+        dx = -dalpha * QQ1[0] + (1-alpha) * dQQ1[0] + dalpha * QQ2[0] + alpha * dQQ2[0]
+        dy = -dalpha * QQ1[1] + (1-alpha) * dQQ1[1] + dalpha * QQ2[1] + alpha * dQQ2[1]
+        tau = math.atan2(dy, dx)
+        # kappa = (dx d²y - d²x dy) / (dx ² + dy ²)^(3/2)
+        kappa = (1-alpha)*QQ1[3] + alpha*QQ2[3]  # FAUX
+        kappa = 1
         return [x, y, tau, kappa]
 
     def sample(self, n):
@@ -61,7 +86,7 @@ class Courbe():
 
 ################################################################################
 
-def dichotomie(q1, q2):
+def dichotomie(space, q1, q2):
     # OMGWTFBBQ : SUSHI
     return [Courbe(q1,q2)]
 
@@ -77,18 +102,22 @@ def solvePath(space, qBegin, qEnd, path):
         qpath += [ path[k] + [orientation, courbure] ]
     qpath += [qEnd]
     
+    eqpath = [qBegin]
     curves_final = []
-    for c in Courbe.buildCurves(qpath):
+    cs = Courbe.buildCurves(qpath)
+    for c in cs:
         qs=c.sample(30)
-        if space.collisionAny(qs):
-            subPath=pathFinder.findConfPath(c.q1,c.q2) # Liste d'états q
+        if space.collisionAny([Robot.kappa2theta(q) for q in qs]):
+            subPath=pathFinder.findConfPath(space,c.q1,c.q2) # Liste d'états q
+            eqpath+=subPath[1:]
             q1=subPath[0]
             for q2 in subPath[1:]:
-                curves_final += dichotomie(q1,q2)
+                curves_final += dichotomie(space, q1, q2)
                 q1=q2
         else:
+            eqpath+=[c.q2]
             curves_final += [c]
-    return curves_final
+    return eqpath, cs, curves_final
 
         
 ################################################################################

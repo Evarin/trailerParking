@@ -1,4 +1,5 @@
 # Structures de donnees
+import math
 
 # Configuration 
 class Robot:
@@ -9,7 +10,7 @@ class Robot:
     steerLength=20.
 
     @staticmethod
-    def conf2practice(q):
+    def kappa2theta(q):
         return [q[0], q[1], q[2], q[2] - math.atan(Robot.l * q[3])]
 
 ##############################################################################
@@ -30,6 +31,8 @@ class Obstacle:
         self.invDenom = 1 / (self.dot00 * self.dot11 - self.dot01 * self.dot01)
 
     def inside(self,x,y):
+        x=x-self.points[0]
+        y=y-self.points[1]
         # Le point est-il dans l'obstacle ?
         dot02=self.u[0]*x + self.u[1]*y
         dot12=self.v[0]*x + self.v[1]*y
@@ -37,7 +40,7 @@ class Obstacle:
         j = (self.dot00 * dot12 - self.dot01 * dot02) * self.invDenom
         return (k >= 0 and j >= 0 and k + j <=1)
 
-    def visible(self,Cx,Cy,Dx,Dy):
+    def visible(self, Cx, Cy, Dx, Dy):
         # Calcule si C est visible depuis D
         Ax=self.points[4]
         Ay=self.points[5]
@@ -55,6 +58,39 @@ class Obstacle:
             if r>=0 and r<=1 and s>=0 and s<=1:
                 return False
         return True
+
+    def collision(self, r):
+        x, y, t1 = r[0:3]
+        v1 = rotate([Robot.trailerLength/2, Robot.trailerWidth/2], t1)
+        v2 = rotate([Robot.trailerLength/2, -Robot.trailerWidth/2], t1)
+        if self.inside(x+v1[0], y+v1[1]) or self.inside(x+v2[0], y+v2[1]) or\
+           self.inside(x-v1[0], y-v1[1]) or self.inside(x-v2[0], y-v2[1]) or\
+           not self.visible(x+v1[0], y+v1[1], x+v2[0], y+v2[1]) or\
+           not self.visible(x+v2[0], y+v2[1], x-v2[0], y-v2[1]) or\
+           not self.visible(x-v1[0], y-v1[1], x-v2[0], y-v2[1]) or\
+           not self.visible(x+v1[0], y+v1[1], x-v1[0], y-v1[1]) or\
+           self.inside(x,y):
+            return True
+        x2 = x + Robot.l*math.cos(t1)
+        y2 = y + Robot.l*math.sin(t1)
+        if self.inside(x2,y2):
+            return True
+        if len(r)>3:
+            t2=r[3]
+            v1 = rotate([Robot.steerLength/2, Robot.steerWidth/2], t2)
+            v2 = rotate([Robot.steerLength/2, -Robot.steerWidth/2], t2)
+            if self.inside(x2+v1[0], y2+v1[1]) or self.inside(x2+v2[0], y2+v2[1]) or\
+               self.inside(x2-v1[0], y2-v1[1]) or self.inside(x2-v2[0], y2-v2[1]) or\
+               not self.visible(x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1]) or\
+               not self.visible(x2+v2[0], y2+v2[1], x2-v2[0], y2-v2[1]) or\
+               not self.visible(x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]) or\
+               not self.visible(x2+v1[0], y2+v1[1], x2-v1[0], y2-v1[1]):
+                return True
+        return False
+
+
+def rotate(v, theta):
+    return [v[0]*math.cos(theta)-v[1]*math.sin(theta), v[1]*math.cos(theta)+v[0]*math.sin(theta)]
 
 ##############################################################################
 
@@ -80,7 +116,6 @@ class Space:
         self.obstacles+=[obs]
 
     def visible(self, x1, y1, x2, y2):
-        # TODO : considérer un tunnel
         for obs in self.obstacles:
             if not obs.visible(x1,y1,x2,y2):
                 return False
@@ -92,13 +127,15 @@ class Space:
                 return False
         return True
     
-    def collision(self, q):
-        # TODO
+    def collision(self, r):
+        for obs in self.obstacles:
+            if obs.collision(r):
+                return True
         return False
 
-    def collisionAny(self, qs):
-        for q in qs:
-            if self.collision(q):
+    def collisionAny(self, rs):
+        for r in rs:
+            if self.collision(r):
                 return True
         return False
 
