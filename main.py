@@ -13,9 +13,14 @@ space.qEnd=[500, 200, math.pi/2, 0.003]
 def computePath(space, displayer, interface):
     qBegin=space.qBegin
     qEnd=space.qEnd
-    graphe, path = pathFinder.findPath(space,qBegin,qEnd)
-    
+    interface.disableAnimation()
     displayer.refreshAll()
+    
+    try:
+        graphe, path = pathFinder.findPath(space,qBegin,qEnd)
+    except Exception as inst:
+        print("Chemin introuvable")
+        return
     
     # for c in curves:
     #     displayer.drawPath(c.canonicalCurveSample(c.q1, 50, -100, 100))
@@ -24,8 +29,11 @@ def computePath(space, displayer, interface):
     # displayer.drawGraph(graphe)
     displayer.drawPath(path, "pink")
     
-    qpath, ocurves, ccurves = pathSolver.solvePath(space, qBegin, qEnd, path)
-
+    try:
+        qpath, ocurves, ccurves = pathSolver.solvePath(space, qBegin, qEnd, path)
+    except Exception as inst:
+        print("Impossible de trouver un chemin réalisable par le robot")
+        return
     
     pos=[]
     for c in ocurves:

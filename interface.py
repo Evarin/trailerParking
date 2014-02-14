@@ -192,6 +192,9 @@ class Interface:
     def enableAnimation(self):
         self.linkedBtns["animater"].state(["!disabled"])
 
+    def disableAnimation(self):
+        self.linkedBtns["animater"].state(["disabled"])
+
     def playAnimation(self):
         #self.setMode("animater")
         #self.linkedBtns["animater"].state(["!disabled"])
