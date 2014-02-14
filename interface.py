@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import ttk
 import math
 from espace import *
+import time
 
 # Interface
 
@@ -13,19 +14,21 @@ class Displayer():
         self.canvas.pack()
         self.space = space
         self.refreshAll()
+        self.animPath=[]
         self.canvas.xview_moveto(self.canvas.canvasx(10))
         self.canvas.yview_moveto(self.canvas.canvasy(10))
 
     def drawObstacle(self,obs):
         self.canvas.create_polygon(obs.points, fill="blue")
 
-    def refreshAll(self):
+    def refreshAll(self, configs=True):
         self.canvas.delete(ALL)
         self.canvas.create_rectangle(0, 0, self.space.width, self.space.height, fill="white")
         for obs in self.space.obstacles:
             self.drawObstacle(obs)
-        self.drawConfig(Robot.kappa2theta(self.space.qBegin))
-        self.drawConfig(Robot.kappa2theta(self.space.qEnd))
+        if configs:
+            self.drawConfig(Robot.kappa2theta(self.space.qBegin))
+            self.drawConfig(Robot.kappa2theta(self.space.qEnd))
 
     def drawGraph(self, graphe, color="grey"):
         points = graphe.points
@@ -76,6 +79,18 @@ class Displayer():
         for r in rs:
             self.drawConfig(r, color)
 
+    def playAnimation(self):
+        if len(self.animPath)==0:
+            return
+        self.refreshAll(False)
+        obj=[]
+        for cfg in self.animPath:
+            for o in obj:
+                self.canvas.delete(o)
+            obj=self.drawConfig(cfg)
+            self.canvas.update()
+            time.sleep(0.025)
+
 def rotate(v, theta):
     return [v[0]*math.cos(theta)-v[1]*math.sin(theta), v[1]*math.cos(theta)+v[0]*math.sin(theta)]
 
@@ -95,7 +110,7 @@ class Interface:
         self.linkedBtns={}
     
     def useCallback(self):
-        self.callback(self.space, self.displayer)
+        self.callback(self.space, self.displayer, self)
     
     def setMode(self, mode):
         self.step = 0
@@ -124,10 +139,11 @@ class Interface:
         for d in self.tempdraw:
             self.displayer.canvas.delete(d)
         self.tempdraw = []
+        self.animReady=False
+        self.linkedBtns["animater"].state(["disabled", "!pressed"])
     
     def handleClick(self,event):
         if self.mode == "obstacle":
-#            print(self.step)
             self.clearTemp()
             if self.step == 0:
                 self.temppoints = []
@@ -173,6 +189,13 @@ class Interface:
                 self.displayer.refreshAll()
             return
         
+    def enableAnimation(self):
+        self.linkedBtns["animater"].state(["!disabled"])
+
+    def playAnimation(self):
+        #self.setMode("animater")
+        #self.linkedBtns["animater"].state(["!disabled"])
+        self.displayer.playAnimation()
 
 def initInterface(space, callback):
     root = Tk()
@@ -188,6 +211,7 @@ def initInterface(space, callback):
     interface.linkedBtns["obstacle"] = obsEditor = ttk.Button(ihmframe, text="Ajout d'obstacle", command=interface.switchModeToObstacle)
     interface.linkedBtns["startPos"] = startEditor = ttk.Button(ihmframe, text="Position de départ", command=interface.switchModeToStart)
     interface.linkedBtns["endPos"] = endEditor = ttk.Button(ihmframe, text="Position de fin", command=interface.switchModeToEnd)
+    interface.linkedBtns["animater"] = animer = ttk.Button(ihmframe, text="Animer", command=interface.playAnimation, padding="10 10 10 10", state=["disabled"])
     
     toolsLbl = ttk.Label(ihmframe, text="Outils")
     
@@ -209,6 +233,7 @@ def initInterface(space, callback):
     endEditor.grid(column=0, row=3, sticky=(N))
     
     launcher.grid(column=0, row=6, sticky=(S))
+    animer.grid(column=0, row=7, sticky=(N))
         
     root.mainloop()
     
