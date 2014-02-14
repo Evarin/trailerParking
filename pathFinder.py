@@ -57,35 +57,6 @@ class PathGraph():
             return ci
 
 ################################################################################
-        
-def findPath(space, start, end):
-    # Trouve un chemin par echantillonage aleatoire
-    start=start[0:2]
-    end=end[0:2]
-    random.seed()
-    graphe = PathGraph([start, end])
-    if space.visible(start[0], start[1], end[0], end[1]):
-        graphe.link(0, 1)
-    while not graphe.reachable(0, 1):
-        x = random.randint(1, space.width-1)
-        y = random.randint(1, space.height-1)
-        if not space.isFree(x, y):
-            continue
-        j = graphe.addPoint([x, y])
-        for p in range(len(graphe.points)):
-            if p==j:
-                continue
-            px, py = graphe.points[p]
-            nrm=math.sqrt((y-py)**2 + (x-px)**2)
-            perp=[(y-py)*Robot.trailerWidth/nrm, (px-x)*Robot.trailerWidth/nrm]
-            theta=math.atan2(y-py, x-px)
-            if space.visible(x, y, px, py) and space.visible(x-perp[0], y-perp[1], px-perp[0], py-perp[1]) \
-                    and space.visible(x+perp[0], y+perp[1], px+perp[0], py+perp[1]) \
-                    and not space.collision([x, y, theta, theta]) and not space.collision([px, py, theta, theta]):
-                graphe.link(p, j)
-    return graphe, dijkstra(graphe)
-
-################################################################################
 
 def voisins(graphe, pt):
     v = []
@@ -126,6 +97,37 @@ def dijkstra (graphe):
 
 ################################################################################
 
+def findPath(space, start, end):
+    # Trouve un chemin par echantillonage aleatoire
+    start=start[0:2]
+    end=end[0:2]
+    random.seed()
+    graphe = PathGraph([start, end])
+    if space.visible(start[0], start[1], end[0], end[1]):
+        graphe.link(0, 1)
+    while not graphe.reachable(0, 1):
+        if len(graphe.points)>100:
+            raise(Exception("Path_Not_Found"))
+        x = random.randint(1, space.width-1)
+        y = random.randint(1, space.height-1)
+        if not space.isFree(x, y):
+            continue
+        j = graphe.addPoint([x, y])
+        for p in range(len(graphe.points)):
+            if p==j:
+                continue
+            px, py = graphe.points[p]
+            nrm=math.sqrt((y-py)**2 + (x-px)**2)
+            perp=[(y-py)*Robot.trailerWidth/nrm, (px-x)*Robot.trailerWidth/nrm]
+            theta=math.atan2(y-py, x-px)
+            if space.visible(x, y, px, py) and space.visible(x-perp[0], y-perp[1], px-perp[0], py-perp[1]) \
+                    and space.visible(x+perp[0], y+perp[1], px+perp[0], py+perp[1]) \
+                    and not space.collision([x, y, theta, theta]) and not space.collision([px, py, theta, theta]):
+                graphe.link(p, j)
+    return graphe, dijkstra(graphe)
+
+################################################################################
+
 # q=x, y, theta, kappa
 
 def interpolation(q1, q2, n):
@@ -138,9 +140,17 @@ def findConfPath(space, q1, q2):
     # Trouve un chemin par echantillonage aleatoire
     random.seed()
     graphe = PathGraph([q1, q2])
+    # Cas simple
+    pts = interpolation(q1, q2, 100)
+    if not space.collisionAny(pts):
+        graphe.link(0, 1)
+        return dijkstra(graphe)
+    # Cas compliqué
     mu = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2]
     sigma = [abs(q1[0] - mu[0])*2, abs(q1[1] - mu[1])*2]
     while not graphe.reachable(0, 1):
+        if len(graphe.points)>30:
+            raise(Exception("Path_Not_Found"))
         x = random.gauss(mu[0], sigma[0])
         y = random.gauss(mu[1], sigma[1])
         t = random.random() * 2 * math.pi

@@ -55,23 +55,24 @@ class Displayer():
     def getSpace(self):
         return self.space
         
-    def drawConfig(self, r, color="yellow"):
+    def drawConfig(self, r, color="orange"):
         x, y, t1 = r[0:3]
         obj = []
         v1 = rotate([Robot.trailerLength/2, Robot.trailerWidth/2], t1)
         v2 = rotate([Robot.trailerLength/2, -Robot.trailerWidth/2], t1)
-        obj += [self.canvas.create_polygon([x+v1[0], y+v1[1], x+v2[0], y+v2[1], x-v1[0], y-v1[1], x-v2[0], y-v2[1]], fill=color)]
+        obj += [self.canvas.create_polygon([x+v1[0], y+v1[1], x+v2[0], y+v2[1], x-v1[0], y-v1[1], x-v2[0], y-v2[1]], outline=color, fill="")]
         x2 = x + Robot.l*math.cos(t1)
         y2 = y + Robot.l*math.sin(t1)
         if len(r)>3:
             t2=r[3]
             v1 = rotate([Robot.steerLength/2, Robot.steerWidth/2], t2)
             v2 = rotate([Robot.steerLength/2, -Robot.steerWidth/2], t2)
-            obj += [self.canvas.create_polygon([x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1], x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]], fill=color)]
+            obj += [self.canvas.create_polygon([x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1], x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]], outline=color, fill="")]
+            obj += [self.canvas.create_line(x2, y2, x2+10*math.cos(t2), y2+10*math.sin(t2), fill=color)]
         obj += [self.canvas.create_line(x, y, x2, y2, fill="black")]
         return obj
 
-    def drawConfigs(self, rs, color="yellow"):
+    def drawConfigs(self, rs, color="orange"):
         for r in rs:
             self.drawConfig(r, color)
 
@@ -89,7 +90,7 @@ class Interface:
         self.displayer = displayer
         self.mode = "rien"
         self.step = 0
-        self.tempdraw = False
+        self.tempdraw = []
         self.temppoints=[]
         self.linkedBtns={}
     
@@ -120,10 +121,9 @@ class Interface:
         self.setMode("endPos")
     
     def clearTemp(self):
-        if self.tempdraw:
-            self.displayer.canvas.delete(self.tempdraw)
-        self.tempdraw = False
-
+        for d in self.tempdraw:
+            self.displayer.canvas.delete(d)
+        self.tempdraw = []
     
     def handleClick(self,event):
         if self.mode == "obstacle":
@@ -131,10 +131,10 @@ class Interface:
             self.clearTemp()
             if self.step == 0:
                 self.temppoints = []
-                self.tempdraw = self.displayer.canvas.create_oval(event.x-1, event.y-1, event.x+1, event.y+1, fill = "blue")
+                self.tempdraw = [self.displayer.canvas.create_oval(event.x-1, event.y-1, event.x+1, event.y+1, fill = "blue")]
             self.temppoints += [event.x, event.y]
             if self.step == 1:
-                self.tempdraw = self.displayer.canvas.create_line(self.temppoints, fill = "blue")
+                self.tempdraw = [self.displayer.canvas.create_line(self.temppoints, fill = "blue")]
             if self.step == 2:
                 self.step = 0
                 self.space.addObstacle(Obstacle(self.temppoints))
@@ -144,6 +144,33 @@ class Interface:
             self.step += 1
             return
         if self.mode == "startPos" or self.mode == "endPos":
+            self.clearTemp()
+            if self.step == 0:
+                self.temppoints = [event.x, event.y]
+                self.tempdraw = self.displayer.drawConfig([event.x, event.y, 0])
+                self.step=1
+                return
+            if self.step == 1:
+                if event.x==self.temppoints[0] and event.y==self.temppoints[1]:
+                    return
+                ang=math.atan2(event.y-self.temppoints[1], event.x-self.temppoints[0])
+                self.temppoints+=[ang]
+                self.tempdraw = self.displayer.drawConfig(self.temppoints)
+                self.step=2
+                return
+            if self.step == 2:
+                x2=self.temppoints[0]+Robot.l*math.cos(self.temppoints[2])
+                y2=self.temppoints[1]+Robot.l*math.sin(self.temppoints[2])
+                ang=math.atan2(event.y-y2, event.x-x2)
+                q=Robot.theta2kappa(self.temppoints+[ang])
+                print(q)
+                if self.mode == "startPos":
+                    self.space.qBegin = q
+                if self.mode == "endPos":
+                    self.space.qEnd = q
+                self.temppoints = []
+                self.step = 0
+                self.displayer.refreshAll()
             return
         
 

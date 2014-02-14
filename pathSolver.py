@@ -42,11 +42,12 @@ class Courbe():
         
     def sample_point(self,u):
         # alpha(u) = sin²( pi/2 * sin²(pi/2 * u/v))
-        SIN2=math.sin((u/self.v)*math.pi/2)**2
-        alpha = math.sin(math.pi/2 * SIN2)**2
+        PISIN2 = math.pi * math.sin((u/self.v)*math.pi/2)**2
+        alpha = math.sin(PISIN2 / 2)**2
         # dalpha(u) = (π^2 sin((π u)/v) sin(π sin^2((π u)/(2 v))))/(4 v)
-        dalpha = math.pi**2 /4 /self.v * math.sin(math.pi*u/self.v) * math.sin(math.pi * SIN2)
+        dalpha = math.pi**2 /4 /self.v * math.sin(math.pi*u/self.v) * math.sin(PISIN2)
         # d2alpha(u) = (π^3 (π cos(π sin^2((π u)/(2 v))) sin^2((π u)/v)+2 cos((π u)/v) sin(π sin^2((π u)/(2 v)))))/(8 v^2)
+        d2alpha = math.pi**3 / (8 * self.v**2) * (math.pi*math.cos(PISIN2)*math.sin(math.pi*u/self.v) + 2*math.cos(math.pi*u/self.v)*math.sin(PISIN2))
         QQ1 = canonicalConf(self.q1, u)
         QQ2 = canonicalConf(self.q2, u-self.v)
         x = (1-alpha)*QQ1[0] + alpha*QQ2[0]
@@ -62,7 +63,11 @@ class Courbe():
         tau = math.atan2(dy, dx)
         # kappa = (dx d²y - d²x dy) / (dx ² + dy ²)^(3/2)
         kappa = (1-alpha)*QQ1[3] + alpha*QQ2[3]  # FAUX
-        kappa = 1
+        d2x = -d2alpha * QQ1[0] - 2 * dalpha * dQQ1[0] + d2alpha * QQ2[0] + 2 * dalpha * dQQ2[0] \
+             + (1-alpha) * d2QQ1[0] + alpha * d2QQ2[0]
+        d2y = -d2alpha * QQ1[1] - 2 * dalpha * dQQ1[1] + d2alpha * QQ2[1] + 2 * dalpha * dQQ2[1] \
+             + (1-alpha) * d2QQ1[1] + alpha * d2QQ2[1]
+        kappa = (dx * d2y - d2x * dy) / (dx**2 + dy**2)**(3/2)
         return [x, y, tau, kappa]
 
     def sample(self, n):
