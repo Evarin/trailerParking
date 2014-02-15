@@ -22,9 +22,6 @@ def computePath(space, displayer, interface):
         print("Chemin introuvable")
         return
     
-    # for c in curves:
-    #     displayer.drawPath(c.canonicalCurveSample(c.q1, 50, -100, 100))
-
 
     # displayer.drawGraph(graphe)
     displayer.drawPath(path, "pink")
@@ -34,6 +31,11 @@ def computePath(space, displayer, interface):
     except Exception as inst:
         print("Impossible de trouver un chemin réalisable par le robot")
         return
+
+    # debug :: affichage des courbes canoniques
+    for c in ocurves:
+        displayer.drawPath(c.canonicalCurveSample(c.q1, 50, -100, 100))
+    # debug
     
     pos=[]
     for c in ocurves:

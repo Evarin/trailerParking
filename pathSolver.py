@@ -7,7 +7,6 @@ import pathFinder
 
 ################################################################################
 
-
 def canonicalConf(q, u):
     x = q[0] + (1/q[3])*( math.sin(q[2]+q[3]*u) - math.sin(q[2]) )
     y = q[1] + (1/q[3])*( math.cos(q[2]) - math.cos(q[2]+q[3]*u) )
@@ -15,32 +14,44 @@ def canonicalConf(q, u):
     kappa = q[3]
     return [x, y, tau, kappa]
 
-
-def canonicaldConf(q, u):
+def canonicalDerivConf(q, u):
     x = math.cos(q[2]+q[3]*u)
     y = math.sin(q[2]+q[3]*u)
     return [x, y]
 
-def canonicald2Conf(q, u):
+def canonicalDeriv2Conf(q, u):
     x = - q[3] * math.sin(q[2]+q[3]*u)
     y = q[3] * math.cos(q[2]+q[3]*u)
     return [x, y]
+
+# Distance entre configuration
+def confDistance(q1, q2):
+    return math.fabs(q1[0] - q2[0]) \
+        + math.fabs(q1[1] - q2[1]) \
+        + math.fabs(q1[2] - q2[2]) \
+        + math.fabs(q1[2] - q2[2] + math.atan(Robot.l * (q1[3]-q2[3])))
+# le dernier terme correspond à peu près à la variation de theta1
 
 ################################################################################
 
 
 
 class Courbe():
-    
-    def __init__(self, q1, q2):
+    # le backcusp correspond à une marche arrière sur une courbe canonique
+
+    def __init__(self, q1, q2, backcusp = False):
         self.q1 = q1
         self.q2 = q2
         vx = self.q2[0] - self.q1[0] + (math.sin(self.q1[2]) / self.q1[3])
         vy = self.q2[1] - self.q1[1] - (math.cos(self.q1[2]) / self.q1[3])
         phi = 2 * math.atan( vy / (vx + math.sqrt(vx**2 + vy**2) )) + (math.pi / 2)
+        # valeur de v correspondant à la projection de q2 sur la courbe de q1.
         self.v = (phi - self.q1[2]) / self.q1[3]
+        self.backcusp = backcusp # backcusp
         
     def sample_point(self,u):
+        if self.backcusp:
+            return canonicalConf(self.q2, v-u)
         # alpha(u) = sin²( pi/2 * sin²(pi/2 * u/v))
         PISIN2 = math.pi * math.sin((u/self.v)*math.pi/2)**2
         alpha = math.sin(PISIN2 / 2)**2
@@ -52,17 +63,15 @@ class Courbe():
         QQ2 = canonicalConf(self.q2, u-self.v)
         x = (1-alpha)*QQ1[0] + alpha*QQ2[0]
         y = (1-alpha)*QQ1[1] + alpha*QQ2[1]
-        tau = (1-alpha)*QQ1[2] + alpha*QQ2[2]  # FAUX
         # tau = arctan(dy/dx) (+pi) = atan2(dy, dx)
-        dQQ1 = canonicaldConf(self.q1, u)
-        dQQ2 = canonicaldConf(self.q2, u-self.v)
-        d2QQ1 = canonicald2Conf(self.q1, u)
-        d2QQ2 = canonicald2Conf(self.q2, u-self.v)
+        dQQ1 = canonicalDerivConf(self.q1, u)
+        dQQ2 = canonicalDerivConf(self.q2, u-self.v)
+        d2QQ1 = canonicalDeriv2Conf(self.q1, u)
+        d2QQ2 = canonicalDeriv2Conf(self.q2, u-self.v)
         dx = -dalpha * QQ1[0] + (1-alpha) * dQQ1[0] + dalpha * QQ2[0] + alpha * dQQ2[0]
         dy = -dalpha * QQ1[1] + (1-alpha) * dQQ1[1] + dalpha * QQ2[1] + alpha * dQQ2[1]
         tau = math.atan2(dy, dx)
         # kappa = (dx d²y - d²x dy) / (dx ² + dy ²)^(3/2)
-        kappa = (1-alpha)*QQ1[3] + alpha*QQ2[3]  # FAUX
         d2x = -d2alpha * QQ1[0] - 2 * dalpha * dQQ1[0] + d2alpha * QQ2[0] + 2 * dalpha * dQQ2[0] \
              + (1-alpha) * d2QQ1[0] + alpha * d2QQ2[0]
         d2y = -d2alpha * QQ1[1] - 2 * dalpha * dQQ1[1] + d2alpha * QQ2[1] + 2 * dalpha * dQQ2[1] \
@@ -91,19 +100,33 @@ class Courbe():
 
 ################################################################################
 
-def dichotomie(space, q1, q2):
+# Renvoie True si q2 est dans le cone d'accessibilité de q1
+def coneAccessible(q1, q2):
     # OMGWTFBBQ : SUSHI
-    return [Courbe(q1,q2)]
+    return True
+
+def dichotomie(space, q1, q2):
+    ### si q2 est dans le cone d'accessibilité de q1
+    if coneAccessible(q1, q2): 
+        return [Courbe(q1,q2)]
+    ### si la courbe canonique de q2 coupe le cone d'accessibilié de q1
+    u_theorique = math.sqrt(math.sqrt(confDistance(q1, q2))) # == d^( 1 / n+3 )
+    for k in range(1, len(5)):   # 5 : nombre quelconque
+        q3 = canonicalConf(q2, k*u_theorique/5)
+        if coneAccessible(q1, q3):
+            return [Courbe(q1,q3), Courbe(q3, q2, backcusp=True)]
+    ### sinon on decoupe l'intervalle en deux et on recommence
+    q3 = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2, (q1[2] + q2[2])/2, (q1[3] + q2[3])/2]
+    return (dichotomie(space, q1, q3)) + (dichotomie(space, q3, q2))
 
 def solvePath(space, qBegin, qEnd, path):
-    curves = []
-    
+    curves = []    
     qpath = [qBegin]
     for k in range(1, len(path)-1):
         # Bullshit
         orientation = math.atan((path[k][1]-path[k-1][1]) / ((path[k][0]-path[k-1][0]) + math.sqrt((path[k][0]-path[k-1][0])**2 + (path[k][1]-path[k-1][1])**2) ) ) \
             +  math.atan((path[k+1][1]-path[k][1]) / ((path[k+1][0]-path[k][0]) + math.sqrt((path[k+1][0]-path[k][0])**2 + (path[k+1][1]-path[k][1])**2) ) )
-        courbure = 0.002 # OMGWTFBBQ : PIZZA
+        courbure = 0.00 # OMGWTFBBQ : PIZZA
         qpath += [ path[k] + [orientation, courbure] ]
     qpath += [qEnd]
     
@@ -111,16 +134,16 @@ def solvePath(space, qBegin, qEnd, path):
     curves_final = []
     cs = Courbe.buildCurves(qpath)
     for c in cs:
-        qs=c.sample(30)
+        qs = c.sample(30)
         if space.collisionAny([Robot.kappa2theta(q) for q in qs]):
-            subPath=pathFinder.findConfPath(space,c.q1,c.q2) # Liste d'états q
-            eqpath+=subPath[1:]
-            q1=subPath[0]
+            subPath = pathFinder.findConfPath(space,c.q1,c.q2) # Liste d'états q
+            eqpath += subPath[1:]
+            q1 = subPath[0]
             for q2 in subPath[1:]:
                 curves_final += dichotomie(space, q1, q2)
-                q1=q2
+                q1 = q2
         else:
-            eqpath+=[c.q2]
+            eqpath +=[c.q2]
             curves_final += [c]
     return eqpath, cs, curves_final
 
