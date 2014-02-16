@@ -11,7 +11,7 @@ class Robot:
 
     @staticmethod
     def kappa2theta(q):
-        return q[0:3] + [math.atan(Robot.l * q[3])]
+        return q[0:3] + [q[2] + math.atan(Robot.l * q[3])]
     
     @staticmethod
     def theta2kappa(r):

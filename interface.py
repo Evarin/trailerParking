@@ -127,6 +127,10 @@ class Interface:
         self.infobulle.configure(text="Cliquez en 3 points de l'espace pour dessiner un obstacle")
         self.setMode("obstacle")
     
+    def switchModeToKillObstacle(self):
+        self.infobulle.configure(text="Cliquez sur l'obstacle à supprimer")
+        self.setMode("killObstacle")
+
     def switchModeToStart(self):
         self.infobulle.configure(text="Cliquez plusieurs fois pour définir la position de la remorque, son orientation, et celle du robot")
         self.setMode("startPos")
@@ -158,6 +162,13 @@ class Interface:
                 self.temppoints = []
                 return
             self.step += 1
+            return
+        if self.mode == "killObstacle":
+            for c in range(len(self.space.obstacles)-1,3,-1):
+                if self.space.obstacles[c].inside(event.x,event.y):
+                    self.space.obstacles=self.space.obstacles[:c]+self.space.obstacles[c+1:]
+                    self.displayer.refreshAll()
+                    return
             return
         if self.mode == "startPos" or self.mode == "endPos":
             self.clearTemp()
@@ -200,6 +211,10 @@ class Interface:
         #self.linkedBtns["animater"].state(["!disabled"])
         self.displayer.playAnimation()
 
+    def killObstacles(self):
+        self.space.obstacles=self.space.obstacles[:4]
+        self.displayer.refreshAll()
+
 def initInterface(space, callback):
     root = Tk()
     mainframe = ttk.Frame(root, padding="3 3 12 12")
@@ -215,6 +230,8 @@ def initInterface(space, callback):
     interface.linkedBtns["startPos"] = startEditor = ttk.Button(ihmframe, text="Position de départ", command=interface.switchModeToStart)
     interface.linkedBtns["endPos"] = endEditor = ttk.Button(ihmframe, text="Position de fin", command=interface.switchModeToEnd)
     interface.linkedBtns["animater"] = animer = ttk.Button(ihmframe, text="Animer", command=interface.playAnimation, padding="10 10 10 10", state=["disabled"])
+    interface.linkedBtns["killObstacle"] = killObs = ttk.Button(ihmframe, text="Supprimer un obstacle", command=interface.switchModeToKillObstacle)
+    killAllObs = ttk.Button(ihmframe, text="Supprimer tous les obstacles", command=interface.killObstacles)
     
     toolsLbl = ttk.Label(ihmframe, text="Outils")
     
@@ -234,6 +251,8 @@ def initInterface(space, callback):
     obsEditor.grid(column=0, row=1, sticky=(N))
     startEditor.grid(column=0, row=2, sticky=(N))
     endEditor.grid(column=0, row=3, sticky=(N))
+    killObs.grid(column=0, row=4, sticky=(N))
+    killAllObs.grid(column=0, row=5, sticky=(N))
     
     launcher.grid(column=0, row=6, sticky=(S))
     animer.grid(column=0, row=7, sticky=(N))

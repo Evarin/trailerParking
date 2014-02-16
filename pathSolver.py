@@ -126,7 +126,10 @@ def solvePath(space, qBegin, qEnd, path):
         # Bullshit
         orientation = math.atan((path[k][1]-path[k-1][1]) / ((path[k][0]-path[k-1][0]) + math.sqrt((path[k][0]-path[k-1][0])**2 + (path[k][1]-path[k-1][1])**2) ) ) \
             +  math.atan((path[k+1][1]-path[k][1]) / ((path[k+1][0]-path[k][0]) + math.sqrt((path[k+1][0]-path[k][0])**2 + (path[k+1][1]-path[k][1])**2) ) )
-        courbure = 0.00 # OMGWTFBBQ : PIZZA
+        # B -> A -> C  -> R = BC / 2 sin BAC
+        BC = math.sqrt((path[k+1][0]-path[k-1][0])**2 + (path[k+1][1]-path[k-1][1])**2) 
+        sinBAC = math.sin( math.atan2(path[k+1][1]-path[k][1], path[k+1][0]-path[k][0]) - math.atan2(path[k-1][1]-path[k][1], path[k-1][0]-path[k][0]) )
+        courbure = abs(2*sinBAC/BC) # OMGWTFBBQ : PIZZA
         qpath += [ path[k] + [orientation, courbure] ]
     qpath += [qEnd]
     
