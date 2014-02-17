@@ -40,12 +40,13 @@ def confDistance(q1, q2):
 class Courbe():
     # le backcusp correspond à une marche arrière sur une courbe canonique
 
-    def __init__(self, q1, q2, backcusp = False, forcev = False):
+    def __init__(self, q1, q2, backcusp = False, forcev = False, reverse = False):
         self.q1 = q1
         self.q2 = q2
         self.q1[2] = (2*math.pi + self.q1[2]) % (2*math.pi)
         self.q2[2] = (2*math.pi + self.q2[2]) % (2*math.pi)
         self.backcusp = backcusp # backcusp
+        self.reverse=reverse
         if forcev != False:
             self.v = forcev
             return
@@ -57,11 +58,13 @@ class Courbe():
         vy = self.q1[1] - self.q2[1] - (math.cos(self.q2[2]) / self.q2[3])
         phi2 = math.atan2(vy, vx) + (math.pi / 2)
         self.v = min(abs((phi1 - self.q1[2]) / self.q1[3]), abs((phi2 - self.q2[2]) / self.q2[3]), 100)
-        print("v=",self.v)
+        #print("v=",self.v)
         
     def sample_point(self,u):
         if self.backcusp:
             return canonicalConf(self.q2, self.v-u)
+        if self.reverse:
+            u=self.v-u
         # alpha(u) = sin²( pi/2 * sin²(pi/2 * u/v))
         PISIN2 = math.pi * math.sin((u/self.v)*math.pi/2)**2
         alpha = math.sin(PISIN2 / 2)**2
@@ -97,7 +100,8 @@ class Courbe():
     # Fonction d'affichage de la courbe canonique d'une configuration
     # DEBUG       vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     
-    def canonicalCurveSample(self, q, n, d, f):
+    @staticmethod
+    def canonicalCurveSample(q, n, d, f):
         return [canonicalConf(q, d + k*((f-d)/n)) for k in range(n+1)]
     
     # DEBUG       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -129,8 +133,15 @@ def coneAccessible(q1, q2):
     # OMGWTFBBQ : SUSHI
     return True
 
-def dichotomie(space, q1, q2):
+def revConf(q):
+    return q[:2]+[q[2]+math.pi, -q[3]]
+
+def dichotomie(space, q1, q2, depth=0):
     # Arrêt du calcul
+    print("Profondeur", depth)
+    if depth==50:
+        print("maxDepth")
+        return [Courbe(q1,q2)]
     if not Control.allowCompute:
         print("Calcul arrêté")
         return [Courbe(q1,q2)]
@@ -146,26 +157,56 @@ def dichotomie(space, q1, q2):
     ### si la courbe canonique de q2 coupe le cone d'accessibilié de q1
     u_theorique = max(100, confDistance(q1, q2)*2) # == d^( 1 / n+3 )
     print("uth = ", u_theorique)
-    pssth=canonicalConf(q2, u_theorique)
-    interface.Displayer.mainDisplayer.canvas.create_oval(pssth[0]-2,pssth[1]-2,pssth[0]+2,pssth[1]+2)
+    #pssth=canonicalConf(q2, u_theorique)
+    #pssth=canonicalConf(q1, u_theorique)
+    #interface.Displayer.mainDisplayer.drawPath(Courbe.canonicalCurveSample(q1, 50, -100, 100),"purple")
+    #interface.Displayer.mainDisplayer.drawPath(Courbe.canonicalCurveSample(q2, 50, -100, 100),"purple")
     maxK = 20
     for k in range(1, maxK):   # 5 : nombre quelconque
         q3 = canonicalConf(q2, k*u_theorique/maxK)
         if coneAccessible(q1, q3):
-            print(":D")
+            print(":D1")
             c1 = Courbe(q1,q3)
             c2 = Courbe(q3,q2, backcusp=True, forcev=k*u_theorique/maxK)
             qs = c2.sample() + c1.sample()
-            if (space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs)):
-                continue
-            return [c1, c2]
+            if not (space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs)):
+                return [c1, c2]
+        q3 = canonicalConf(q1, k*u_theorique/maxK)
+        if coneAccessible(q2, q3):
+            print(":D2")
+            c1 = Courbe(q1,q3, backcusp=True, forcev=k*u_theorique/maxK)
+            c2 = Courbe(q3,q2)
+            qs = c2.sample() + c1.sample()
+            if not (space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs)):
+                return [c1, c2]
+        
+        q3 = canonicalConf(q2, -k*u_theorique/maxK)
+        if coneAccessible(q3, q1):
+            print(":D1b")
+            c1 = Courbe(q3,q1, reverse = True)
+            c2 = Courbe(q3,q2, backcusp=True, forcev=-k*u_theorique/maxK)
+            qs = c2.sample() + c1.sample()
+            if not (space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs)):
+                print("Vb")
+                return [c1, c2]
+        q3 = canonicalConf(q1, -k*u_theorique/maxK)
+        if coneAccessible(q3, q2):
+            print(":D2b")
+            c1 = Courbe(q1,q3, backcusp=True, forcev=-k*u_theorique/maxK)
+            c2 = Courbe(q2,q3, reverse=True)
+            qs = c2.sample() + c1.sample()
+            if not (space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs)):
+                print("Vb")
+                return [c1, c2]
     print("T.T")
     ### sinon on decoupe l'intervalle en deux et on recommence
-    if abs(2*math.pi+q1[2]-q2[2])<abs(q1[2]-q2[2]):
-        q1[2]=q1[2]+2*math.pi
-    q3 = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2, (2*math.pi + (q1[2] + q2[2])/2) % (2*math.pi), (q1[3] + q2[3])/2]
+    miang=(2*math.pi + (q1[2] + q2[2])/2) % (2*math.pi)
+    print("dang",q1[2]-miang)
+    if abs((q1[2]-miang))>math.pi/2:
+        miang=(math.pi+miang)%(2*math.pi)
+    q3 = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2, miang, (q1[3] + q2[3])/2]
     print("tau = ",q3[2])
-    return (dichotomie(space, q1, q3)) + (dichotomie(space, q3, q2))
+    return (dichotomie(space, q1, q3, depth+1)) + (dichotomie(space, q3, q2, depth+1))
 
 def mauvaisKappa(qlist):
     for q in qlist:
@@ -186,9 +227,21 @@ def solvePath(space, qBegin, qEnd, path):
         qpath += [ path[k] + [orientation, courbure] ]
     qpath += [qEnd]
     
+    
     eqpath = [qBegin]
     curves_final = []
     cs = Courbe.buildCurves(qpath)
+
+
+    # debug :: affichage des courbes canoniques
+    for c in cs:
+        interface.Displayer.mainDisplayer.drawPath(Courbe.canonicalCurveSample(c.q1, 50, -100, 100))
+        # debug
+    
+    interface.Displayer.mainDisplayer.drawCurves(cs)    
+    interface.Displayer.mainDisplayer.canvas.update()
+
+
     for c in cs:
         qs = c.sample()
         if (space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs)):

@@ -129,8 +129,12 @@ class Interface:
         self.tempdraw = []
         self.temppoints=[]
         self.linkedBtns={}
+        self.ccurves=[]
     
     def computePath(self):
+        self.linkedBtns["computer"].state(["disabled"])
+        self.linkedBtns["killComputing"].state(["!disabled"])
+        self.linkedBtns["redraw"].state(["disabled"])
         Interface.allowAnimation = False
         Control.allowCompute=True
         qBegin=self.space.qBegin
@@ -143,41 +147,42 @@ class Interface:
         except Exception as inst:
             print(inst)
             print("Chemin introuvable")
+            self.linkedBtns["computer"].state(["!disabled"])
             return
         
-        self.displayer.drawGraph(graphe)
+        #self.displayer.drawGraph(graphe)
         self.displayer.drawPath(path, "pink")
         
         self.displayer.canvas.update()
         time.sleep(0.025)
 
         try:
-            qpath, ocurves, ccurves = pathSolver.solvePath(self.space, qBegin, qEnd, path)
+            qpath, ocurves, self.ccurves = pathSolver.solvePath(self.space, qBegin, qEnd, path)
         except Exception as inst:
             print(inst)
             print("Impossible de trouver un chemin réalisable par le robot")
+            self.linkedBtns["computer"].state(["!disabled"])
             return
         
-        # debug :: affichage des courbes canoniques
-        for c in ocurves:
-            self.displayer.drawPath(c.canonicalCurveSample(c.q1, 50, -100, 100))
-        # debug
-        
-        pos=[]
-        for c in ccurves:
-            pos+=[Robot.kappa2theta(q) for q in c.sample(5)]
-        self.displayer.drawConfigs(pos)
-        
         anim=[]
-        for c in ccurves:
+        for c in self.ccurves:
             nstep=max(20, int(math.sqrt((c.q1[0]-c.q2[0])**2 + (c.q1[1]-c.q2[1])**2)/5))
             anim+=[Robot.kappa2theta(q) for q in c.sample(nstep)]
 
         self.displayer.drawPath(qpath)
-        self.displayer.drawCurves(ocurves)
-        self.displayer.drawCurves(ccurves,"black")
         self.displayer.animPath=anim
         self.enableAnimation()
+        self.linkedBtns["redraw"].state(["!disabled"])
+        self.linkedBtns["computer"].state(["!disabled"])
+        self.linkedBtns["killComputing"].state(["disabled"])
+        self.redrawPath()
+    
+    def redrawPath(self):
+        pos=[]
+        for c in self.ccurves:
+            pos+=[Robot.kappa2theta(q) for q in c.sample(3)]
+        self.displayer.drawConfigs(pos)
+        self.displayer.drawCurves(self.ccurves,"black")
     
     def setMode(self, mode):
         self.step = 0
@@ -283,12 +288,14 @@ class Interface:
         self.displayer.playAnimation()
 
     def killObstacles(self):
-        self.space.obstacles=self.space.obstacles[:4]
+        self.space.obstacles=self.space.obstacles[:8]
         self.displayer.refreshAll()
 
     def killComputing(self):
+        self.linkedBtns["killComputing"].state(["disabled"])
         print("Arrêt...")
         Control.allowCompute = False
+        self.linkedBtns["computer"].state(["!disabled"])
 
 
 ################################################################################
@@ -303,16 +310,20 @@ def initInterface(space):
     root.title("Park your car !")
     
     ihmframe = ttk.Frame(mainframe, padding="5 5 5 5")
-    launcher = ttk.Button(ihmframe, text="Calcul du trajet", command=interface.computePath, padding="10 10 10 10")
-    interface.linkedBtns["obstacle"] = obsEditor = ttk.Button(ihmframe, text="Ajout d'obstacle", command=interface.switchModeToObstacle)
-    interface.linkedBtns["startPos"] = startEditor = ttk.Button(ihmframe, text="Position de départ", command=interface.switchModeToStart)
-    interface.linkedBtns["endPos"] = endEditor = ttk.Button(ihmframe, text="Position de fin", command=interface.switchModeToEnd)
+    interface.linkedBtns["computer"] = launcher = ttk.Button(ihmframe, text="Calcul du trajet", command=interface.computePath, padding="10 10 10 10")
+    interface.linkedBtns["obstacle"] = obsEditor = ttk.Button(ihmframe, text="Ajouter un obstacle", command=interface.switchModeToObstacle, padding="10 10 10 10")
+    interface.linkedBtns["startPos"] = startEditor = ttk.Button(ihmframe, text="Position de départ", command=interface.switchModeToStart, padding="10 10 10 10")
+    interface.linkedBtns["endPos"] = endEditor = ttk.Button(ihmframe, text="Position de fin", command=interface.switchModeToEnd, padding="10 10 10 10")
     interface.linkedBtns["animater"] = animer = ttk.Button(ihmframe, text="Animer", command=interface.playAnimation, padding="10 10 10 10", state=["disabled"])
-    interface.linkedBtns["killObstacle"] = killObs = ttk.Button(ihmframe, text="Supprimer un obstacle", command=interface.switchModeToKillObstacle)
-    interface.linkedBtns["killComputing"] = killComputing = ttk.Button(ihmframe, text="Arrêter le calcul", command=interface.killComputing)
-    killAllObs = ttk.Button(ihmframe, text="Supprimer tous les obstacles", command=interface.killObstacles)
+    interface.linkedBtns["killObstacle"] = killObs = ttk.Button(ihmframe, text="Supprimer un obstacle", command=interface.switchModeToKillObstacle, padding="10 10 10 10")
+    interface.linkedBtns["killComputing"] = killComputing = ttk.Button(ihmframe, text="Arrêter le calcul", command=interface.killComputing, padding="10 10 10 10", state=["disabled"])
+    interface.linkedBtns["redraw"] = redraw = ttk.Button(ihmframe, text="Retracer le chemin", command=interface.redrawPath, padding="10 10 10 10", state=["disabled"])
+    interface.linkedBtns["clear"] = clearer = ttk.Button(ihmframe, text="Effacer les traces", command=displayer.refreshAll, padding="10 10 10 10")
+    killAllObs = ttk.Button(ihmframe, text="Supprimer tous les obstacles", command=interface.killObstacles, padding="10 10 10 10")
     
-    toolsLbl = ttk.Label(ihmframe, text="Outils")
+    toolsLbl = ttk.Label(ihmframe, text="Outils", padding="20 20 20 20")
+    computeLbl = ttk.Label(ihmframe, text="Exécution", padding="20 20 20 20")
+    renderLbl = ttk.Label(ihmframe, text="Rendu", padding="20 20 20 20")
     
     interface.infobulle = infobulle = ttk.Label(mainframe, text="Choisissez un outil")
     
@@ -333,8 +344,14 @@ def initInterface(space):
     killObs.grid(column=0, row=4, sticky=(N))
     killAllObs.grid(column=0, row=5, sticky=(N))
     
-    launcher.grid(column=0, row=6, sticky=(S))
-    animer.grid(column=0, row=7, sticky=(N))
+    computeLbl.grid(column=0, row=6, sticky=(N))
+    launcher.grid(column=0, row=7, sticky=(S))
     killComputing.grid(column=0, row=8, sticky=(N))
+    
+    
+    renderLbl.grid(column=0, row=9, sticky=(N))
+    animer.grid(column=0, row=10, sticky=(N))
+    redraw.grid(column=0, row=11, sticky=(N))
+    clearer.grid(column=0, row=12, sticky=(N))
         
     root.mainloop()

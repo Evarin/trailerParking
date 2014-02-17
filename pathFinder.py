@@ -107,9 +107,10 @@ def findPath(space, start, end):
     graphe = PathGraph([start, end])
     if space.visible(start[0], start[1], end[0], end[1]):
         graphe.link(0, 1)
+        return graphe, dijkstra(graphe)
     nsup=50
     while nsup>0:
-        print("nsup ",nsup)
+        #print("nsup ",nsup)
         if graphe.reachable(0,1):
             nsup -= 1
         # Arrêt du calcul
