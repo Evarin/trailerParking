@@ -4,7 +4,8 @@
 import math
 from espace import *
 import pathFinder
-from interface import *
+import interface
+import time
 
 ################################################################################
 
@@ -42,6 +43,8 @@ class Courbe():
     def __init__(self, q1, q2, backcusp = False, forcev = False):
         self.q1 = q1
         self.q2 = q2
+        self.q1[2] = (2*math.pi + self.q1[2]) % (2*math.pi)
+        self.q2[2] = (2*math.pi + self.q2[2]) % (2*math.pi)
         self.backcusp = backcusp # backcusp
         if forcev != False:
             self.v = forcev
@@ -86,7 +89,7 @@ class Courbe():
         kappa = (dx * d2y - d2x * dy) / (dx**2 + dy**2)**(3/2)
         return [x, y, tau, kappa]
 
-    def sample(self, n=100):
+    def sample(self, n=70):
         return [self.sample_point((self.v)*k/n) for k in range(n+1)]
 
 
@@ -109,12 +112,12 @@ class Courbe():
 
 # Renvoie True si q2 est dans le cone d'accessibilité de q1
 def coneAccessible(q1, q2):
-    print((q2[0] - q1[0] - (1/Robot.kappaMax)*math.sin(q1[2]))**2 \
+    """print((q2[0] - q1[0] - (1/Robot.kappaMax)*math.sin(q1[2]))**2 \
         + (q2[1] - q1[1] + (1/Robot.kappaMax)*math.cos(q1[2]))**2)
     print((q2[0] - q1[0] + (1/Robot.kappaMax)*math.sin(q1[2]))**2 \
         + (q2[1] - q1[1] - (1/Robot.kappaMax)*math.cos(q1[2]))**2)
     print(min(abs(2*math.pi-q1[2]+q2[2]), abs(q1[2] - q2[2])))
-    print(((q2[0]-q1[0])*math.cos(q1[2])+(q2[1]-q1[1])*math.sin(q1[2])))
+    print(((q2[0]-q1[0])*math.cos(q1[2])+(q2[1]-q1[1])*math.sin(q1[2])))"""
     dang = q1[2] - math.atan2(q2[1] - q1[1], q2[0] - q1[0])
     return ((q2[0] - q1[0] - (1/Robot.kappaMax)*math.sin(q1[2]))**2 \
         + (q2[1] - q1[1] + (1/Robot.kappaMax)*math.cos(q1[2]))**2 > (1/Robot.kappaMax)**2) \
@@ -127,6 +130,12 @@ def coneAccessible(q1, q2):
     return True
 
 def dichotomie(space, q1, q2):
+    # Arrêt du calcul
+    if not Control.allowCompute:
+        print("Calcul arrêté")
+        return [Courbe(q1,q2)]
+    interface.Displayer.mainDisplayer.canvas.update()
+    # Sinon
     ### si q2 est dans le cone d'accessibilité de q1
     if coneAccessible(q1, q2): 
         print("\\o/")
@@ -135,11 +144,11 @@ def dichotomie(space, q1, q2):
         if not ((space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs))):
             return [c]
     ### si la courbe canonique de q2 coupe le cone d'accessibilié de q1
-    u_theorique = max(10, confDistance(q1, q2)*2) # == d^( 1 / n+3 )
+    u_theorique = max(100, confDistance(q1, q2)*2) # == d^( 1 / n+3 )
     print("uth = ", u_theorique)
     pssth=canonicalConf(q2, u_theorique)
-    Displayer.mainDisplayer.canvas.create_oval(pssth[0]-2,pssth[1]-2,pssth[0]+2,pssth[1]+2)
-    maxK = 50
+    interface.Displayer.mainDisplayer.canvas.create_oval(pssth[0]-2,pssth[1]-2,pssth[0]+2,pssth[1]+2)
+    maxK = 20
     for k in range(1, maxK):   # 5 : nombre quelconque
         q3 = canonicalConf(q2, k*u_theorique/maxK)
         if coneAccessible(q1, q3):
@@ -152,7 +161,10 @@ def dichotomie(space, q1, q2):
             return [c1, c2]
     print("T.T")
     ### sinon on decoupe l'intervalle en deux et on recommence
-    q3 = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2, (q1[2] + q2[2])/2, (q1[3] + q2[3])/2]
+    if abs(2*math.pi+q1[2]-q2[2])<abs(q1[2]-q2[2]):
+        q1[2]=q1[2]+2*math.pi
+    q3 = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2, (2*math.pi + (q1[2] + q2[2])/2) % (2*math.pi), (q1[3] + q2[3])/2]
+    print("tau = ",q3[2])
     return (dichotomie(space, q1, q3)) + (dichotomie(space, q3, q2))
 
 def mauvaisKappa(qlist):
@@ -165,7 +177,6 @@ def solvePath(space, qBegin, qEnd, path):
     curves = []    
     qpath = [qBegin]
     for k in range(1, len(path)-1):
-        # Bullshit
         orientation = math.atan((path[k][1]-path[k-1][1]) / ((path[k][0]-path[k-1][0]) + math.sqrt((path[k][0]-path[k-1][0])**2 + (path[k][1]-path[k-1][1])**2) ) ) \
             +  math.atan((path[k+1][1]-path[k][1]) / ((path[k+1][0]-path[k][0]) + math.sqrt((path[k+1][0]-path[k][0])**2 + (path[k+1][1]-path[k][1])**2) ) )
         # B -> A -> C  -> R = BC / 2 sin BAC
@@ -181,7 +192,7 @@ def solvePath(space, qBegin, qEnd, path):
     for c in cs:
         qs = c.sample()
         if (space.collisionAny([Robot.kappa2theta(q) for q in qs]) or mauvaisKappa(qs)):
-            subPath = pathFinder.findConfPath(space,c.q1,c.q2) # Liste d'états q
+            g, subPath = pathFinder.findConfPath(space,c.q1,c.q2) # Liste d'états q
             eqpath += subPath[1:]
             print(len(subPath))
             q1 = subPath[0]

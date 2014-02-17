@@ -18,6 +18,9 @@ class Robot:
     def theta2kappa(r):
         return r[0:3] + [math.tan(r[3] - r[2]) / Robot.l]
 
+class Control:
+    allowCompute=True
+
 ##############################################################################
 
 # Obstacle triangulaire

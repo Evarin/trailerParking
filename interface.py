@@ -3,6 +3,11 @@ from tkinter import ttk
 import math
 from espace import *
 import time
+import pathFinder
+import pathSolver
+
+
+################################################################################
 
 # Interface
 
@@ -94,11 +99,16 @@ class Displayer():
         self.refreshAll(False)
         obj=[]
         for cfg in self.animPath:
+            if not Interface.allowAnimation:
+                return
             for o in obj:
                 self.canvas.delete(o)
             obj=self.drawConfig(cfg)
             self.canvas.update()
             time.sleep(0.025)
+        Interface.allowAnimation = False
+
+################################################################################
 
 def rotate(v, theta):
     return [v[0]*math.cos(theta)-v[1]*math.sin(theta), v[1]*math.cos(theta)+v[0]*math.sin(theta)]
@@ -106,10 +116,12 @@ def rotate(v, theta):
 def voidfunction():
     return
 
+################################################################################
+
 class Interface:
+    allowAnimation = False
     
-    def __init__(self, callback, space, displayer):
-        self.callback = callback
+    def __init__(self, space, displayer):
         self.space = space
         self.displayer = displayer
         self.mode = "rien"
@@ -118,8 +130,54 @@ class Interface:
         self.temppoints=[]
         self.linkedBtns={}
     
-    def useCallback(self):
-        self.callback(self.space, self.displayer, self)
+    def computePath(self):
+        Interface.allowAnimation = False
+        Control.allowCompute=True
+        qBegin=self.space.qBegin
+        qEnd=self.space.qEnd
+        self.disableAnimation()
+        self.displayer.refreshAll()
+        
+        try:
+            graphe, path = pathFinder.findPath(self.space,qBegin,qEnd)
+        except Exception as inst:
+            print(inst)
+            print("Chemin introuvable")
+            return
+        
+        self.displayer.drawGraph(graphe)
+        self.displayer.drawPath(path, "pink")
+        
+        self.displayer.canvas.update()
+        time.sleep(0.025)
+
+        try:
+            qpath, ocurves, ccurves = pathSolver.solvePath(self.space, qBegin, qEnd, path)
+        except Exception as inst:
+            print(inst)
+            print("Impossible de trouver un chemin réalisable par le robot")
+            return
+        
+        # debug :: affichage des courbes canoniques
+        for c in ocurves:
+            self.displayer.drawPath(c.canonicalCurveSample(c.q1, 50, -100, 100))
+        # debug
+        
+        pos=[]
+        for c in ccurves:
+            pos+=[Robot.kappa2theta(q) for q in c.sample(5)]
+        self.displayer.drawConfigs(pos)
+        
+        anim=[]
+        for c in ccurves:
+            nstep=max(20, int(math.sqrt((c.q1[0]-c.q2[0])**2 + (c.q1[1]-c.q2[1])**2)/5))
+            anim+=[Robot.kappa2theta(q) for q in c.sample(nstep)]
+
+        self.displayer.drawPath(qpath)
+        self.displayer.drawCurves(ocurves)
+        self.displayer.drawCurves(ccurves,"black")
+        self.displayer.animPath=anim
+        self.enableAnimation()
     
     def setMode(self, mode):
         self.step = 0
@@ -131,7 +189,6 @@ class Interface:
         if self.mode in self.linkedBtns:
             self.linkedBtns[self.mode].state(["pressed"])
         
-    
     def switchModeToObstacle(self):
         self.infobulle.configure(text="Cliquez en 3 points de l'espace pour dessiner un obstacle")
         self.setMode("obstacle")
@@ -220,28 +277,39 @@ class Interface:
     def playAnimation(self):
         #self.setMode("animater")
         #self.linkedBtns["animater"].state(["!disabled"])
+        Interface.allowAnimation=False
+        time.sleep(0.05)
+        Interface.allowAnimation=True
         self.displayer.playAnimation()
 
     def killObstacles(self):
         self.space.obstacles=self.space.obstacles[:4]
         self.displayer.refreshAll()
 
-def initInterface(space, callback):
+    def killComputing(self):
+        print("Arrêt...")
+        Control.allowCompute = False
+
+
+################################################################################
+
+def initInterface(space):
     root = Tk()
     mainframe = ttk.Frame(root, padding="3 3 12 12")
     displayer = Displayer(mainframe, space)
     
-    interface = Interface(callback, space, displayer)
+    interface = Interface(space, displayer)
     
     root.title("Park your car !")
     
     ihmframe = ttk.Frame(mainframe, padding="5 5 5 5")
-    launcher = ttk.Button(ihmframe, text="Calcul du trajet", command=interface.useCallback, padding="10 10 10 10")
+    launcher = ttk.Button(ihmframe, text="Calcul du trajet", command=interface.computePath, padding="10 10 10 10")
     interface.linkedBtns["obstacle"] = obsEditor = ttk.Button(ihmframe, text="Ajout d'obstacle", command=interface.switchModeToObstacle)
     interface.linkedBtns["startPos"] = startEditor = ttk.Button(ihmframe, text="Position de départ", command=interface.switchModeToStart)
     interface.linkedBtns["endPos"] = endEditor = ttk.Button(ihmframe, text="Position de fin", command=interface.switchModeToEnd)
     interface.linkedBtns["animater"] = animer = ttk.Button(ihmframe, text="Animer", command=interface.playAnimation, padding="10 10 10 10", state=["disabled"])
     interface.linkedBtns["killObstacle"] = killObs = ttk.Button(ihmframe, text="Supprimer un obstacle", command=interface.switchModeToKillObstacle)
+    interface.linkedBtns["killComputing"] = killComputing = ttk.Button(ihmframe, text="Arrêter le calcul", command=interface.killComputing)
     killAllObs = ttk.Button(ihmframe, text="Supprimer tous les obstacles", command=interface.killObstacles)
     
     toolsLbl = ttk.Label(ihmframe, text="Outils")
@@ -252,7 +320,7 @@ def initInterface(space, callback):
     
     canvas.bind("<Button-1>", interface.handleClick)
     
-    mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
+    mainframe.grid(column=0, row=0)
 
     canvas.grid(column=1, row=0, sticky=(N, E))
     infobulle.grid(column=1, row=1, sticky=(N, W, E, S))
@@ -267,6 +335,6 @@ def initInterface(space, callback):
     
     launcher.grid(column=0, row=6, sticky=(S))
     animer.grid(column=0, row=7, sticky=(N))
+    killComputing.grid(column=0, row=8, sticky=(N))
         
     root.mainloop()
-    

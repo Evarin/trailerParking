@@ -5,6 +5,8 @@ import random
 from heapq import *
 import math
 from espace import *
+import time
+import interface
 
 ################################################################################
 
@@ -105,8 +107,17 @@ def findPath(space, start, end):
     graphe = PathGraph([start, end])
     if space.visible(start[0], start[1], end[0], end[1]):
         graphe.link(0, 1)
-    while not graphe.reachable(0, 1):
-        if len(graphe.points)>100:
+    nsup=50
+    while nsup>0:
+        print("nsup ",nsup)
+        if graphe.reachable(0,1):
+            nsup -= 1
+        # Arrêt du calcul
+        if not Control.allowCompute:
+            return graphe, [graphe.points[0], graphe.points[1]]
+        time.sleep(0.001)
+        # Calcul normal
+        if len(graphe.points)>200:
             raise(Exception("Path_Not_Found"))
         x = random.randint(1, space.width-1)
         y = random.randint(1, space.height-1)
@@ -141,15 +152,24 @@ def findConfPath(space, q1, q2):
     random.seed()
     graphe = PathGraph([q1, q2])
     # Cas simple
-    pts = interpolation(q1, q2, 100)
+    pts = interpolation(q1, q2, 60)
     if not space.collisionAny(pts):
         graphe.link(0, 1)
-        return dijkstra(graphe)
+        return graphe, dijkstra(graphe)
     # Cas compliqué
     mu = [(q1[0] + q2[0])/2, (q1[1] + q2[1])/2]
     sigma = [abs(q1[0] - mu[0])*2, abs(q1[1] - mu[1])*2]
-    while not graphe.reachable(0, 1):
-        if len(graphe.points)>30:
+    nsup = 1
+    while nsup>0:
+        print("nsup ",nsup)
+        if graphe.reachable(0,1):
+            nsup -= 1
+        # Arrêt du calcul
+        if not Control.allowCompute:
+            return graphe, [graphe.points[0], graphe.points[1]]
+        interface.Displayer.mainDisplayer.canvas.update()
+        # Sinon
+        if len(graphe.points)>100:
             raise(Exception("Path_Not_Found"))
         x = random.gauss(mu[0], sigma[0])
         y = random.gauss(mu[1], sigma[1])
@@ -169,4 +189,4 @@ def findConfPath(space, q1, q2):
             if space.collisionAny(pts):
                 continue
             graphe.link(p, j)
-    return dijkstra(graphe)
+    return graphe, dijkstra(graphe)
