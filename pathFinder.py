@@ -118,7 +118,7 @@ def findPath(space, start, end):
                 continue
             px, py = graphe.points[p]
             nrm=math.sqrt((y-py)**2 + (x-px)**2)
-            perp=[(y-py)*Robot.trailerWidth/nrm, (px-x)*Robot.trailerWidth/nrm]
+            perp=[(y-py)*Robot.trailerWidth/2/nrm, (px-x)*Robot.trailerWidth/2/nrm]
             theta=math.atan2(y-py, x-px)
             if space.visible(x, y, px, py) and space.visible(x-perp[0], y-perp[1], px-perp[0], py-perp[1]) \
                     and space.visible(x+perp[0], y+perp[1], px+perp[0], py+perp[1]) \

@@ -7,8 +7,10 @@ import time
 # Interface
 
 class Displayer():
-    
+    mainDisplayer=0
+
     def __init__(self, master, space):
+        Displayer.mainDisplayer=self # GROS HACK
         self.master = master
         self.canvas = Canvas(self.master, width=space.width, height=space.height)
         self.canvas.pack()
@@ -63,14 +65,21 @@ class Displayer():
         obj = []
         v1 = rotate([Robot.trailerLength/2, Robot.trailerWidth/2], t1)
         v2 = rotate([Robot.trailerLength/2, -Robot.trailerWidth/2], t1)
-        obj += [self.canvas.create_polygon([x+v1[0], y+v1[1], x+v2[0], y+v2[1], x-v1[0], y-v1[1], x-v2[0], y-v2[1]], outline=color, fill="")]
+        if self.space.collision(r):
+            obj += [self.canvas.create_polygon([x+v1[0], y+v1[1], x+v2[0], y+v2[1], x-v1[0], y-v1[1], x-v2[0], y-v2[1]], outline=color, fill="green")]
+        else:    
+            obj += [self.canvas.create_polygon([x+v1[0], y+v1[1], x+v2[0], y+v2[1], x-v1[0], y-v1[1], x-v2[0], y-v2[1]], outline=color, fill="")]
         x2 = x + Robot.l*math.cos(t1)
         y2 = y + Robot.l*math.sin(t1)
         if len(r)>3:
             t2=r[3]
             v1 = rotate([Robot.steerLength/2, Robot.steerWidth/2], t2)
             v2 = rotate([Robot.steerLength/2, -Robot.steerWidth/2], t2)
-            obj += [self.canvas.create_polygon([x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1], x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]], outline=color, fill="")]
+            tq = Robot.theta2kappa(r)[3]
+            if abs(tq) > Robot.kappaMax:
+                obj += [self.canvas.create_polygon([x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1], x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]], outline=color, fill="red")]
+            else:
+                obj += [self.canvas.create_polygon([x2+v1[0], y2+v1[1], x2+v2[0], y2+v2[1], x2-v1[0], y2-v1[1], x2-v2[0], y2-v2[1]], outline=color, fill="")]
             obj += [self.canvas.create_line(x2, y2, x2+10*math.cos(t2), y2+10*math.sin(t2), fill=color)]
         obj += [self.canvas.create_line(x, y, x2, y2, fill="black")]
         return obj
@@ -190,6 +199,8 @@ class Interface:
                 y2=self.temppoints[1]+Robot.l*math.sin(self.temppoints[2])
                 ang=math.atan2(event.y-y2, event.x-x2)
                 q=Robot.theta2kappa(self.temppoints+[ang])
+                if abs(q[3]) > Robot.kappaMax:
+                    q[3] = Robot.kappaMax if q[3]>0 else -Robot.kappaMax
                 print(q)
                 if self.mode == "startPos":
                     self.space.qBegin = q

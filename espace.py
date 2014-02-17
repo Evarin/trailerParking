@@ -4,10 +4,11 @@ import math
 # Configuration 
 class Robot:
     l=50.
-    trailerWidth=30.
-    trailerLength=60.
-    steerWidth=20.
-    steerLength=20.
+    trailerWidth = 30.
+    trailerLength = 60.
+    steerWidth = 20.
+    steerLength = 20.
+    kappaMax = 0.1
 
     @staticmethod
     def kappa2theta(q):

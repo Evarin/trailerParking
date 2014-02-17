@@ -23,12 +23,13 @@ def computePath(space, displayer, interface):
         return
     
 
-    # displayer.drawGraph(graphe)
+    displayer.drawGraph(graphe)
     displayer.drawPath(path, "pink")
     
     try:
         qpath, ocurves, ccurves = pathSolver.solvePath(space, qBegin, qEnd, path)
     except Exception as inst:
+        print(inst)
         print("Impossible de trouver un chemin réalisable par le robot")
         return
 
@@ -38,13 +39,13 @@ def computePath(space, displayer, interface):
     # debug
     
     pos=[]
-    for c in ocurves:
+    for c in ccurves:
         pos+=[Robot.kappa2theta(q) for q in c.sample(5)]
     displayer.drawConfigs(pos)
 
     anim=[]
     for c in ccurves:
-        nstep=int(math.sqrt((c.q1[0]-c.q2[0])**2 + (c.q1[1]-c.q2[1])**2)/5)
+        nstep=max(20, int(math.sqrt((c.q1[0]-c.q2[0])**2 + (c.q1[1]-c.q2[1])**2)/5))
         anim+=[Robot.kappa2theta(q) for q in c.sample(nstep)]
 
     displayer.drawPath(qpath)
